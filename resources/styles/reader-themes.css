@@ -1,0 +1,273 @@
+:root {
+    --r-theme-gray: 245 245 245;
+    --r-theme-beige: 245 241 232;
+    --r-theme-parchment: 250 243 233;
+    --r-theme-softmint: 224 238 225;
+    --r-theme-skyblue: 220 235 239;
+    --r-theme-dark: 27 27 27;
+}
+
+.r-theme-btn-0 {
+    background-color: rgb(var(--r-theme-parchment) / var(--tw-bg-opacity));
+}
+
+.r-theme-btn-1 {
+    background-color: rgb(var(--r-theme-beige) / var(--tw-bg-opacity));
+}
+
+.r-theme-btn-2 {
+    background-color: rgb(var(--r-theme-gray) / var(--tw-bg-opacity));
+}
+
+.r-theme-btn-3 {
+    background-color: rgb(var(--r-theme-softmint) / var(--tw-bg-opacity));
+}
+
+.r-theme-btn-4 {
+    background-color: rgb(var(--r-theme-skyblue) / var(--tw-bg-opacity));
+}
+
+.r-theme-btn-dark {
+    background-color: rgb(var(--r-theme-dark) / var(--tw-bg-opacity));
+}
+
+/* ==================== theme parchment ==================== */
+:root.r-theme-0 {
+    --reader-paper: var(--r-theme-parchment);
+    --reader-bg: 246 231 210;
+}
+
+/* ==================== theme beige ==================== */
+:root.r-theme-1 {
+    --reader-paper: var(--r-theme-beige);
+    --reader-bg: 235 230 218;
+}
+
+/* ==================== theme gray ==================== */
+:root.r-theme-2 {
+    --reader-paper: var(--r-theme-gray);
+    --reader-bg: 235 235 235;
+}
+
+/* ==================== theme softmint ==================== */
+:root.r-theme-3 {
+    --reader-paper: var(--r-theme-softmint);
+    --reader-bg: 201 224 203;
+}
+
+/* ==================== theme skyblue ==================== */
+:root.r-theme-4 {
+    --reader-paper: var(--r-theme-skyblue);
+    --reader-bg: 206 221 225;
+}
+
+
+/* ==================== theme dark ==================== */
+:root.dark {
+    --reader-paper: var(--r-theme-dark);
+    --reader-bg: 52 52 52;
+}
+
+:root.dark .prose {
+    --tw-prose-body: #d1d5db;
+    --tw-prose-headings: #fff;
+    --tw-prose-lead: #9ca3af;
+    --tw-prose-links: #fff;
+    --tw-prose-bold: #fff;
+    --tw-prose-counters: #9ca3af;
+    --tw-prose-bullets: #4b5563;
+    --tw-prose-hr: #374151;
+    --tw-prose-quotes: #f3f4f6;
+    --tw-prose-quote-borders: #374151;
+    --tw-prose-captions: #9ca3af;
+    --tw-prose-code: #fff;
+    --tw-prose-pre-code: #d1d5db;
+    --tw-prose-pre-bg: rgba(0, 0, 0, 0.5);
+    --tw-prose-th-borders: #4b5563;
+    --tw-prose-td-borders: #374151;
+}
+
+
+.tag\.book-reader.r-font-0 {
+    font-family: inherit;
+    /* font-family: "SimHei", "STHeiti", sans-serif; */
+}
+
+.tag\.book-reader.r-font-1 {
+    font-family: "SimSun", "Songti SC", sans-serif;
+}
+
+.tag\.book-reader.r-font-2 {
+    font-family: "KaiTi", "STKaiti", sans-serif;
+}
+
+.tag\.book-reader.r-max-w-0 {
+    max-width: 48rem;
+}
+
+.tag\.book-reader.r-max-w-1 {
+    max-width: 56rem;
+}
+
+.tag\.book-reader.r-max-w-2 {
+    max-width: 64rem;
+}
+
+.tag\.book-reader.r-max-w-3 {
+    max-width: none;
+}
+
+/* Scrollbar */
+/* ===== Scrollbar CSS ===== */
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--reader-bg)) rgb(var(--reader-paper));
+}
+
+/* Chrome, Edge, and Safari */
+*::-webkit-scrollbar {
+    width: 16px;
+}
+
+*::-webkit-scrollbar-track {
+    background: rgb(var(--reader-bg));
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--reader-paper));
+    border-radius: 9999px;
+    border: 3px solid rgb(var(--reader-bg));
+}
+
+@media not all and (min-width: 640px) {
+    * {
+        scrollbar-width: none;
+    }
+
+    *::-webkit-scrollbar {
+        width: 0;
+    }
+}
+
+/* if you want more customized style: */
+/* 
+.prose:first-child {
+    margin-top: 0;
+}
+
+.prose img {
+    max-width: 100%;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-weight: normal;
+    color: #159957;
+}
+
+.prose p {
+    margin-bottom: 1em;
+}
+
+.prose ul,
+.prose ol {
+    margin-top: 0;
+}
+
+.prose blockquote {
+    padding: 0 1rem;
+    margin-left: 0;
+    font-size: 1.2rem;
+    color: #819198;
+    border-left: 0.3rem solid #dce6f0;
+}
+
+.prose blockquote>:first-child {
+    margin-top: 0;
+}
+
+.prose blockquote>:last-child {
+    margin-bottom: 0;
+}
+
+.prose table {
+    width: 100%;
+    overflow: auto;
+    word-break: normal;
+    word-break: keep-all;
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin: 1rem 0;
+}
+
+.prose table th {
+    font-weight: bold;
+    background-color: #4CAF50;
+    color: white;
+}
+
+.prose table th,
+.prose table td {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #e9ebec;
+    text-align: left;
+}
+
+.prose table tr:nth-child(odd) {
+    background-color: #f2f2f2;
+}
+
+.prose dl {
+    padding: 0;
+}
+
+.prose dl dt {
+    padding: 0;
+    margin-top: 1rem;
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.prose dl dd {
+    padding: 0;
+    margin-bottom: 1rem;
+}
+
+.prose hr {
+    margin: 1rem 0;
+    border: 0;
+    height: 1px;
+    background: #aaa;
+    background-image: linear-gradient(to right, #eee, #aaa, #eee);
+}
+
+.prose {
+    max-width: 64rem;
+    padding: 2rem 4rem;
+    margin: 0 auto;
+    font-size: 1.1rem;
+}
+
+@media screen and (min-width: 42em) and (max-width: 64em) {
+    .prose {
+        padding: 2rem 2rem;
+    }
+}
+
+@media screen and (max-width: 42em) {
+    .prose {
+        padding: 2rem 1rem;
+        font-size: 1rem;
+    }
+
+    .prose blockquote {
+        font-size: 1.1rem;
+    }
+} */
