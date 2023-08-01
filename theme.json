@@ -1168,6 +1168,31 @@
           "color": "rgb(var(--text-quaternary) / <alpha-value>)"
         },
         {
+          "name": "Quinary",
+          "slug": "quinary",
+          "color": "rgb(var(--text-quinary) / <alpha-value>)"
+        },
+        {
+          "name": "Primary-bg",
+          "slug": "primary-bg",
+          "color": "rgb(var(--bg-primary) / <alpha-value>)"
+        },
+        {
+          "name": "Secondary-bg",
+          "slug": "secondary-bg",
+          "color": "rgb(var(--bg-secondary) / <alpha-value>)"
+        },
+        {
+          "name": "Tertiary-bg",
+          "slug": "tertiary-bg",
+          "color": "rgb(var(--bg-tertiary) / <alpha-value>)"
+        },
+        {
+          "name": "Quaternary-bg",
+          "slug": "quaternary-bg",
+          "color": "rgb(var(--bg-quaternary) / <alpha-value>)"
+        },
+        {
           "name": "Reader-paper",
           "slug": "reader-paper",
           "color": "rgb(var(--reader-paper) / <alpha-value>)"

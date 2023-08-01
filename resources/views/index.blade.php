@@ -9,7 +9,7 @@
     <hr class="w-4/5 mx-auto my-5">
 
     {{-- Main --}}
-    <div class="my-5 mx-[calc(20vw-4rem)] flex gap-10">
+    <div class="my-5 mx-xfit-md flex gap-10">
         <div class="flex-grow">
             @include('partials.modules.item-list')
             <hr class="w-4/5 mx-auto my-5">

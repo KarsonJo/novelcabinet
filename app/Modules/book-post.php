@@ -2,11 +2,17 @@
 
 namespace KarsonJo\BookPost;
 
+use KarsonJo\BookPost\SqlQuery\BookFilterBuilder;
 use PHP_CodeSniffer\Reports\Full;
-use WP_Post;
+use WP;
 
+// should not modify after theme active
 define('KBP_BOOK', 'book');
 define('KBP_BOOK_GENRE', 'genre');
+
+// can modify
+define('KBP_BOOK_SLUG', 'book');
+define('KBP_BOOK_GENRE_SLUG', 'book-genre');
 
 define('KBP_TEMPLATE_SUPPORT', false);
 
@@ -16,6 +22,17 @@ add_action('init', 'KarsonJo\\BookPost\\custom_post_type_book');
 if (KBP_TEMPLATE_SUPPORT === true)
     add_filter('template_include', 'KarsonJo\\BookPost\\book_template_include');
 
+function book_template_include($template)
+{
+    global $post;
+
+    if (get_post_type($post) === KBP_BOOK) {
+        $temp = empty(get_post_ancestors($post)) ? locate_template('bookintro.php') : locate_template('bookchapter.php');
+        $template = $temp ? $temp : $template;
+    }
+
+    return $template;
+}
 
 /**
  * 注册 "book" 自定义文章类型
@@ -48,7 +65,7 @@ function custom_post_type_book()
         'taxonomies'            => array(),
         'hierarchical'          => true,
         'has_archive'           => true,
-        'rewrite'               => array('slug' => KBP_BOOK, 'with_front' => false),
+        'rewrite'               => array('slug' => KBP_BOOK_SLUG, 'with_front' => false),
         'query_var'             => true,
         'capability_type'       => 'post',
         'show_in_menu'          => true,
@@ -83,140 +100,160 @@ function wpdocs_create_book_taxonomies()
         'labels'            => $labels,
         'show_ui'           => true,
         'show_admin_column' => true,
-        'query_var'         => true,
-        'rewrite'           => array('slug' => KBP_BOOK_GENRE),
+        'query_var'         => false,
+        'rewrite'           => array('slug' => KBP_BOOK_GENRE_SLUG),
     );
 
     register_taxonomy(KBP_BOOK_GENRE, array(KBP_BOOK), $args);
 }
 
-//==========功能==========
-/**
- * 获取给定小说的所有卷与章节的元数据，常用于生成目录
- * 卷与章节均为WP_Post类型
- * [todo]: 目前会一同返回所有文章内容，考虑改为$wpdb直接查元数据
- * @param int $id 书的Id
- * @return \WP_Post[][] | false 按卷、章分的二维数组，数组第一个元素是卷元素
- */
-function get_book_volume_chapters($id)
+use WP_Post;
+
+class Book
 {
-    $args = [
-        'child_of' => $id,
-        'post_type' => KBP_BOOK,
-        'sort_order' => 'ASC',
-        'sort_column' => 'menu_order,post_title',
-    ];
+    public int $ID;
+    /**
+     * 书的封面图url
+     */
+    public string $cover;
+    /**
+     * 书的永久链接
+     */
+    public string $permalink;
 
-    $pages = get_pages($args);
-    if (!$pages) return false;
+    public string $title;
+    public string $author;
+    public string $excerpt;
+    /**
+     * Book类型的Genre Taxonomy
+     */
+    public array $genres;
+
+    public float $rating;
+    public int $wordCount;
+
+    /**
+     * 书的目录
+     * 懒加载变量 $this->contents;
+     */
+    private ?BookContents $_contents = null;
+
+    // /**
+    //  * 只用ID初始化的WP_Post对象
+    //  * 用于某些只需要id，但需要传入WP_Post的WordPress函数
+    //  * （避免直接传入id多查询一次数据库） <--木大哒
+    //  */
+    // protected WP_Post $_post;
+
+    protected function __construct()
+    {
+    }
+
+    public static function initBookFromPost(WP_Post|int $id): ?Book
+    {
+        if ($id instanceof WP_Post)
+            $id = $id->ID;
+        $book = BookFilterBuilder::create()->of_id($id)->get_as_book();
+        if (!$book)
+            return null;
+
+        return $book[0];
+    }
+
+    public static function initBookFromArray(array $params): ?Book
+    {
+        if (!array_key_exists('ID', $params))
+            return null;
+
+        $book = new Book();
+
+        // $_post = new WP_Post((object)['ID' => $params['ID']]);
+        // $_post->filter = 'raw'; // 为了逃避查询
+        // $_post->post_type = KBP_BOOK;
+        $book->ID = $params['ID'];
+        // $book->_post = $_post;
+
+        if (array_key_exists('post_title', $params))
+            $book->title = $params['post_title'];
+
+        if (array_key_exists('post_excerpt', $params))
+            $book->excerpt = $params['post_excerpt'];
+
+        if (array_key_exists('rating', $params))
+            $book->rating = $params['rating'] ?? 0;
+
+        if (array_key_exists('word_count', $params))
+            $book->wordCount = $params['word_count'] ?? 0;
+
+        if (array_key_exists('post_author', $params))
+            $book->author = get_the_author_meta('display_name', $params['post_author']);
+
+        // 获取额外信息
+        // $book->permalink = get_permalink($_post);
+        $book->permalink = get_post_permalink($book->ID);
+
+        $images = wp_get_attachment_image_src(get_post_thumbnail_id($book->ID), "full");
+        $book->cover = is_array($images) ? $images[0] : "";
 
 
+        $book->genres = get_the_terms($book->ID, $bookGenre ?? defined('KBP_BOOK_GENRE') ? KBP_BOOK_GENRE : "category");
 
-    // 按卷、章组织二维数组返回
-    $res = [];
-    $cnt = -1;
-    $parent_id = -1;
-    foreach ($pages as $page) {
-        if ($page->post_parent != $parent_id) {
-            $res[++$cnt] = []; //加新卷
-            $parent_id = $page->ID;
+        return $book;
+    }
+
+    public static function initBookFromParams(...$params): ?Book
+    {
+        return Book::initBookFromArray($params);
+    }
+
+    public static function initBookFromObject(object $obj): ?Book
+    {
+        return Book::initBookFromArray((array)$obj);
+    }
+
+    public function __get($name)
+    {
+        print_r(123);
+        // Check if the property is not already loaded
+        if ($name === 'contents') {
+            if ($this->ID === null)
+                return null;
+
+            if ($this->_contents == null) {
+                print_r(456);
+                $this->_contents = new BookContents($this->ID);
+            }
+            return $this->_contents;
         }
-
-        $res[$cnt][] = $page;
+        return null;
     }
 
-    return $res;
-}
+    // public static function initBookFromAnonymous(object $obj): ?Book
+    // {
+    //     if ($obj || !isset($obj->ID))
+    //         return null;
 
-/**
- * 获取给定小说的所有卷与章节的元数据，常用于生成目录
- * @param WP_Post|int $book 书本身或从属的任何级别文章
- */
-function get_book_contents(WP_Post|int $book): ?BookContents
-{
-    return new BookContents($book);
-}
+    //     $book = new Book();
 
-/**
- * [DEBUG]获取所有书籍
- * @return \WP_Post[]|false
- */
-function get_all_books()
-{
-
-    $args = [
-        'post_parent' => 0, // 获取所有没有父级的页面
-        'post_type' => KBP_BOOK, // 获取所有页面
-        // 'post_status' => 'publish', // 获取所有已发布的页面
-    ];
-
-    return get_posts($args);
-}
-
-/**
- * 获取书籍
- * @param array|int $param WordPress查询args，或者代表查询个数的int
- * @param int $paged 页码
- * @return \WP_Post[]|false
- */
-function get_books($param = 9, $paged = 1)
-{
-    $args = is_array($param) ? $param : array(
-        'numberposts' => is_numeric($param) ? $param : 9,
-    );
-
-    $args['post_type'] = KBP_BOOK;
-    $args['paged'] = $paged;
-    $args['post_parent'] = 0;
+    //     foreach (get_object_vars($obj) as $key => $value) {
+    //         $book->$key = $value;
+    //     }
 
 
-    return get_posts($args);
-}
 
-/**
- * 查找根文章
- * 用于从卷或章（子文章）找到所属书籍
- * @param \WP_Post|int $post 卷或章的对象或编号
- * @return \WP_Post|null 返回当前post的最根文章
- */
-function get_book_from_post($post)
-{
-    $post = get_post($post);
-    while ($post && $post->post_parent != 0)
-        $post = get_post($post->post_parent);
+    //     if ($obj->ID)
+    //         $book = new Book();
+    //     $_post = new WP_Post((object)['ID' => $ID]);
 
-    return $post;
-}
+    //     $book->ID = $ID;
+    //     $book->_post = $_post;
+    // }
 
-/**
- * 获取书籍的分类信息
- * @param int $id 书本id
- * @return \WP_Term[]|false|\WP_Error 分类
- */
-function get_book_genres($id)
-{
-    return get_the_terms($id, defined('KBP_BOOK_GENRE') ? KBP_BOOK_GENRE : "category");
-}
-
-/**
- * 获取书籍的封（第一张freature image）
- * @param int $id 书本id
- * @param string $size 图片大小，同get_post_thumbnail_id
- */
-function get_book_cover($id, $size = 'full')
-{
-    $images = wp_get_attachment_image_src(get_post_thumbnail_id($id), $size);
-    return is_array($images) ? $images[0] : "";
-}
-
-function book_template_include($template)
-{
-    global $post;
-
-    if (get_post_type($post) === KBP_BOOK) {
-        $temp = empty(get_post_ancestors($post)) ? locate_template('bookintro.php') : locate_template('bookchapter.php');
-        $template = $temp ? $temp : $template;
-    }
-
-    return $template;
+    // protected function loadAssociatedData()
+    // {
+    //     $images = wp_get_attachment_image_src(get_post_thumbnail_id($this->_post), "full");
+    //     $this->cover = is_array($images) ? $images[0] : "";
+    //     $this->permalink = get_permalink($this->_post);
+    //     $this->tags = get_the_terms($this->_post, $bookGenre ?? defined('KBP_BOOK_GENRE') ? KBP_BOOK_GENRE : "category");
+    // }
 }

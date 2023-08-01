@@ -51,7 +51,7 @@ class BookContents implements \ArrayAccess, \Iterator, \Countable
 
         global $wpdb;
         // A sql query to return all post titles
-        $results = $wpdb->get_results($wpdb->prepare("
+        $results = $wpdb->get_results($wpdb->prepare('
         select      p2.post_parent as parent2_id,
                     p1.post_parent as parent_id,
                     p1.ID,
@@ -59,9 +59,9 @@ class BookContents implements \ArrayAccess, \Iterator, \Countable
         from        wp_posts p1
         left join   wp_posts p2 on p2.ID = p1.post_parent 
         where       %d in (p1.post_parent, p2.post_parent) 
-                    and p1.post_status = 'publish'
+                    and p1.post_status = "publish"
                     and p1.post_type = %s
-        order by    parent2_id, parent_id, p1.menu_order, p1.post_title;", $book, KBP_BOOK));
+        order by    parent2_id, parent_id, p1.menu_order, p1.post_title;', $book, KBP_BOOK));
 
         if (!$results)
             return false;

@@ -16,7 +16,7 @@
                 <div class="tag.cover m-auto flex-shrink-0 w-1/2
                     max-sm:-translate-y-10 sm:w-2/3 sm:py-8">
                     <div class="w-full aspect-[3/4] relative">
-                        <x-book-style1 :cover-src="$coverSrc" />
+                        <x-book-style1 :cover-src="$book->cover" />
                     </div>
                 </div>
 
@@ -27,16 +27,16 @@
             <div class="px-4 sm:py-8">
                 <div class="tag.info flex flex-col items-center gap-2 sm:items-start">
                     <div class="flex flex-col text-center gap-2 sm:flex-row items-center flex-wrap">
-                        <h1 class="text-lg font-semibold text-primary"> {{ $bookName }} </h1>
+                        <h1 class="text-lg font-semibold text-primary"> {{ $book->title }} </h1>
                         {{-- <div class="my-4 mx-2 max-sm:hidden">
                                 <x-headline-style1 :title="'Excerpt'" :link="'#'" :more="'more'" />
                             </div> --}}
-                        <h2 class="text-secondary"> {{ $author }} 著 </h2>
+                        <h2 class="text-secondary"> {{ $book->author }} 著 </h2>
                     </div>
-                    <h2 class="rating-stars text-yellow-400 text" style="--rating:8.75"></h2>
+                    <h2 class="rating-stars text-yellow-400 text" style="--rating:{{ $book->rating }}"></h2>
                     {{-- <div class="bg-slate-500 bg-opacity-10 px-1 py-0.5 rounded-md ">tag1</div> --}}
                     <div class="tag.tags m-1 flex flex-wrap gap-1 justify-center text-sm">
-                        @foreach ($tags as $tag)
+                        @foreach ($book->genres as $tag)
                             <x-tag :tag="$tag->name" />
                         @endforeach
                     </div>
@@ -56,11 +56,11 @@
                             展开全部
                         </label>
                         <p class="text-tertiary sm:min-h-[6rem] max-h-12 peer-checked:max-h-[unset]">
-                            {{ $excerpt }}
+                            {{ $book->excerpt }}
                         </p>
                     </div>
                     <div class="my-4">
-                        <a class="inline-block rounded px-6 pb-2 pt-2.5 w-full shadow-md transition duration-150 saturate-100 {{ $hasContent ? ' bg-theme-bg1 text-theme-fg1 cursor-pointer' : 'bg-gray-400 text-white pointer-events-none' }}
+                        <a class="inline-block rounded px-6 pb-2 pt-2.5 w-full shadow-md transition duration-150 saturate-100 text-center {{ $hasContent ? ' bg-theme-bg1 text-theme-fg1 cursor-pointer' : 'bg-gray-400 text-white pointer-events-none' }}
                             hover:saturate-150 focus:outline-none focus:ring-0 active:saturate-200 sm:w-auto" type="button" data-te-ripple-init data-te-ripple-color="light" href="{{ $readingLink }}">
                             {{ $hasContent ? '开始阅读' : '敬请期待' }}
                         </a>
@@ -75,7 +75,7 @@
         <div class="tag.contents grow py-8 px-6 card-bd2">
             <x-headline-style1 :title="'目录'" />
             {{-- Contents --}}
-            <x-book-contents-list1 :contents="$contents"/>
+            <x-book-contents-list1 :contents="$contents" />
         </div>
     </section>
 </article>

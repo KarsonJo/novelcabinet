@@ -31,10 +31,11 @@
     {{-- @include('partials.elements.headline1', ['title' => 'blah', 'link' => '#', 'more' => '233']) --}}
     <x-headline-style1 :title="'blah'" :link="'#'" :more="'more'" />
     {{-- Item --}}
-    <div class="grid grid-cols-list-item gap-5">
+    <x-book-list-main :book-posts="KarsonJo\BookPost\SqlQuery\BookFilterBuilder::create()->limit(6)->offset($page_number)->get_as_book()" />
+    {{-- <div class="grid grid-cols-list-item gap-5">
         @foreach (KarsonJo\BookPost\get_books(6, $page_number) as $post)
             <x-book-list-item-main :book-post="$post" />
         @endforeach
-    </div>
+    </div> --}}
     {{-- </div> --}}
 </div>

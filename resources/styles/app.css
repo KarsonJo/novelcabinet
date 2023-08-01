@@ -29,6 +29,13 @@
         --text-secondary: 51 65 85; /*slate 700*/
         --text-tertiary: 71 85 105; /*slate 600*/
         --text-quaternary: 100 116 139; /*slate 500*/
+        --text-quinary: 195 198 209; /*slate 500*/
+
+        /* background color */
+        --bg-primary: 255 255 255;
+        --bg-secondary: 249 249 251;
+        --bg-tertiary: 255 255 255;
+        --bg-quaternary: 235 234 234;
 
         /* reader default */
         --reader-paper: 250 243 233;
@@ -41,6 +48,13 @@
         --text-secondary: 241 245 249;
         --text-tertiary: 226 232 240;
         --text-quaternary: 203 213 225;
+
+
+        /* background color */
+        --bg-primary: 27 27 27;
+        --bg-secondary: 52 52 52;
+        --bg-tertiary: 78 78 78;
+        --bg-quaternary: 52 52 52;
     }
 
     body {
@@ -121,6 +135,7 @@
         border-width: 0 3px 3px 0;
         display: inline-block;
         padding: 3px;
+        aspect-ratio: 1;
     }
 
     .right {
@@ -163,6 +178,39 @@
         background-clip: text;
         -webkit-text-fill-color: transparent;
     }
+
+    /* ==================== Loading fade ==================== */
+    
+    .loader-fade {
+        @apply relative;
+        /* width : $size;
+        height: $size;
+        display: inline-block;
+        position: relative;
+        &::after , &::before {
+          content: '';
+          width : $size;
+          height: $size;
+          border-radius: 50%;
+          background: $lite;
+          position: absolute;
+          left:0;
+          top: 0;
+          animation: animloader14 2s linear infinite;
+        }
+        &::after {
+          animation-delay: 1s;
+        } */
+      }
+
+      .loader-fade::before,
+      .loader-fade::after {
+        @apply inset-0 absolute bg-current animate-fade-out-expand rounded-full;
+        content: "";
+      }
+      .loader-fade::after {
+        animation-delay: -1s;
+      }
 
     /* ==================== Card border ==================== */
     .card-bd1 {

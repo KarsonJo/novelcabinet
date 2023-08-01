@@ -1,5 +1,5 @@
 {{-- Navigation Bar --}}
-<header class="banner flex justify-between min-h-[3rem] mb-1 bg-theme-bg1 bg-opacity-10
+<header class="banner flex justify-between min-h-[4rem] bg-theme-bg1 bg-opacity-10
 sm:min-h-[5rem]">
     {{-- Brand --}}
     <div class="brand flex justify-start m-4 bg-slate-300">

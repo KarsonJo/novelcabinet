@@ -24,7 +24,9 @@ function book_database_init()
 		post_id bigint(20) unsigned NOT NULL,
 		rating_weight int(11) unsigned NOT NULL,
 		rating_avg float NOT NULL,
+        word_count int(11) unsigned NOT NULL,
 		PRIMARY KEY  (post_id),
+        KEY idx_id_rating_word (post_id, rating_avg, word_count)
         KEY idx_rating_avg (rating_avg)
 	) %s;";
     create_db_table('kbp_postmeta', $sql);
@@ -42,7 +44,7 @@ function book_database_init()
 
     // wp_kbp_favorite_lists
     $sql = "CREATE TABLE %s (
-        ID int(11) unsigned NOT NULL,
+        ID int(11) unsigned NOT NULL AUTO_INCREMENT,
         user_id bigint(20) unsigned NOT NULL,
         list_title text NOT NULL,
         PRIMARY KEY  (ID),

@@ -89,8 +89,10 @@ function readDefaultSettings() {
     document.querySelector(".r-theme-btn-0")?.click()
 
     const slider = getTextSizeSlider()
-    slider.value = (parseInt(slider.min) + parseInt(slider.max)) / 2
-    slider.dispatchEvent(new Event('input'))
+    if (slider) {
+        slider.value = (parseInt(slider.min) + parseInt(slider.max)) / 2
+        slider.dispatchEvent(new Event('input'))
+    }
 
     document.querySelector(".r-font-btn-0")?.click()
     document.querySelector(".r-max-w-btn-1")?.click()

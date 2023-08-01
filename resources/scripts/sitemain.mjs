@@ -2,7 +2,6 @@
 function readerSectionHighlight() {
     // let articles = document.querySelectorAll('article[class*="r-art-"]')
     let articles = document.querySelectorAll('article[data-art-id]')
-    console.log(articles.length)
     let inWindow = new Set()
 
     let callback = (entries) => {
@@ -125,15 +124,21 @@ function initCarousel() {
 }
 
 import { initReaderSettings } from "./reader-settings.mjs";
+import { initBookFinder } from "./book-finder.mjs";
 
 
 export function siteInitialize() {
+    // all
     initListeners()
-    initCarousel()
-    initReaderSettings()
-
     setDefaultValues()
+    // index
+    initCarousel()
 
-
+    // reader
+    initReaderSettings()
     readerSectionHighlight()
+
+    // book finder
+    initBookFinder()
+
 }

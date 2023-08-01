@@ -11,7 +11,7 @@ module.exports = {
         80: '.8',
       },
       gridTemplateColumns: {
-        'list-item': 'repeat(auto-fill, minmax(240px, 1fr))',
+        'list-item': 'repeat(auto-fill, minmax(300px, 1fr))',
         'contents-item': 'repeat(auto-fill, minmax(200px, 1fr))',
       },
       colors: {
@@ -21,12 +21,18 @@ module.exports = {
         'secondary': 'rgb(var(--text-secondary) / <alpha-value>)',
         'tertiary': 'rgb(var(--text-tertiary) / <alpha-value>)',
         'quaternary': 'rgb(var(--text-quaternary) / <alpha-value>)',
+        'quinary': 'rgb(var(--text-quinary) / <alpha-value>)',
+        'primary-bg': 'rgb(var(--bg-primary) / <alpha-value>)',
+        'secondary-bg': 'rgb(var(--bg-secondary) / <alpha-value>)',
+        'tertiary-bg': 'rgb(var(--bg-tertiary) / <alpha-value>)',
+        'quaternary-bg': 'rgb(var(--bg-quaternary) / <alpha-value>)',
         'reader-paper': 'rgb(var(--reader-paper) / <alpha-value>)',
         'reader-bg': 'rgb(var(--reader-bg) / <alpha-value>)',
-        
+
       }, // Extend Tailwind's default colors
       animation: {
         'fade-in-f': 'fade-in 0.4s',
+        'fade-out-expand': 'fade-out-expand 2s infinite',
         'bounce-light': 'bounce-light 0.8s infinite',
         'elastic-f': 'elastic 0.4s',
         'spin-s': 'spin 10s linear infinite',
@@ -35,6 +41,7 @@ module.exports = {
         'peek-in-t-f': 'peek-in-t 0.4s',
         'peek-in-b-f': 'peek-in-b 0.4s',
         'rotate': 'spin 1s',
+        
       },
       keyframes: {
         'fade-in': {
@@ -43,6 +50,16 @@ module.exports = {
           },
           '100%': {
             'opacity': 1
+          }
+        },
+        'fade-out-expand': {
+          '0%': {
+            'transform': 'scale(0)',
+            'opacity': '1',
+          },
+          '100%': {
+            'transform': 'scale(1)',
+            'opacity': '0',
           }
         },
         'peek-in-l': {
@@ -103,12 +120,16 @@ module.exports = {
           }
         }
       },
+      margin: {
+        'xfit-md': 'calc(max(1rem,20vw - 6rem))',
+        'xfit-lg': 'calc(max(1rem,25vw - 15rem))',
+      },
     },
   },
   plugins: [
     require('@tailwindcss/line-clamp'),
     require('@tailwindcss/typography'),
-    plugin(function({ addVariant }) {
+    plugin(function ({ addVariant }) {
       addVariant('opened', '&.opened');
       addVariant('not-opened', '&:not(.opened)');
       addVariant('selected', '&.selected');
