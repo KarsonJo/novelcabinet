@@ -6,6 +6,9 @@ use Roots\Acorn\View\Composer;
 use KarsonJo\BookPost;
 use KarsonJo\BookPost\Book;
 
+use function KarsonJo\BookPost\SqlQuery\get_book_user_rating;
+use function KarsonJo\BookPost\SqlQuery\get_user_favorite_lists;
+
 class BookIntro extends Composer
 {
     /**
@@ -24,24 +27,27 @@ class BookIntro extends Composer
      */
     public function override()
     {
-        $book = get_post();
+        // global $post;
+        $post = get_post();
         // $volumes = BookPost\get_book_volume_chapters($book->ID);
-        
+
         // if (array_key_exists(0, $volumes) && array_key_exists(1, $volumes[0]))
         //     $first_chapter = $volumes[0][1];
 
-        $this_book = Book::initBookFromPost($book->ID);
+        $this_book = Book::initBookFromPost($post->ID);
         $contents = $this_book->contents;
         $first_chapter = $contents->get_first_chapter();
         $has_content = boolval($first_chapter);
-        
-
+        // print_r($book->ratingWeight);
         return [
             'contents' => $contents,
             'volumes' => $contents->get_volumes(),
             'hasContent' => $has_content,
             'readingLink' => $has_content ? get_permalink($first_chapter->ID) : '#',
             'book' => $this_book,
+            'ratingValid' => $this_book->ratingWeight > 10,
+            'userRating' => get_book_user_rating($this_book->ID),
+            'favoriteLists' => get_user_favorite_lists(get_current_user_id(), null, $this_book->ID) ?: [(object)[]],
         ];
     }
 }

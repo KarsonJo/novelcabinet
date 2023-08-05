@@ -74,11 +74,11 @@ module.exports = {
         },
         'peek-in-t': {
           '0%': {
-            '--tw-translate-x': '-2rem',
+            'transform': 'translateY(-2rem)',
             'opacity': 0,
           },
           '100%': {
-            '--tw-translate-x': '0',
+            'transform': 'translateY(0)',
             'opacity': 1
           }
         },
@@ -132,6 +132,8 @@ module.exports = {
     plugin(function ({ addVariant }) {
       addVariant('opened', '&.opened');
       addVariant('not-opened', '&:not(.opened)');
+      addVariant('show', '&.show');
+      addVariant('not-show', '&:not(.show)');
       addVariant('selected', '&.selected');
     }),
   ],

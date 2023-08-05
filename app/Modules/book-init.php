@@ -22,11 +22,11 @@ function book_database_init()
     // wp_kbp_postmeta
     $sql = "CREATE TABLE %s (
 		post_id bigint(20) unsigned NOT NULL,
-		rating_weight int(11) unsigned NOT NULL,
-		rating_avg float NOT NULL,
-        word_count int(11) unsigned NOT NULL,
+		rating_weight int(11) unsigned DEFAULT 0 NOT NULL,
+		rating_avg double DEFAULT 0 NOT NULL,
+        word_count int(11) unsigned DEFAULT 0 NOT NULL,
 		PRIMARY KEY  (post_id),
-        KEY idx_id_rating_word (post_id, rating_avg, word_count)
+        KEY idx_id_rating_word (post_id, rating_avg, word_count),
         KEY idx_rating_avg (rating_avg)
 	) %s;";
     create_db_table('kbp_postmeta', $sql);
@@ -35,8 +35,9 @@ function book_database_init()
     $sql = "CREATE TABLE %s (
         post_id bigint(20) unsigned NOT NULL,
         user_id bigint(20) unsigned NOT NULL,
+        weight int(11) NOT NULL,
         rating float NOT NULL,
-        time datetime DEFAULT '0000-01-01 00:00:00' NOT NULL,
+        time datetime DEFAULT '1000-01-01 00:00:00' NOT NULL,
         PRIMARY KEY  (user_id, post_id),
         KEY idx_time (time)
     ) %s;";
@@ -46,9 +47,11 @@ function book_database_init()
     $sql = "CREATE TABLE %s (
         ID int(11) unsigned NOT NULL AUTO_INCREMENT,
         user_id bigint(20) unsigned NOT NULL,
-        list_title text NOT NULL,
+        list_title varchar(255) NOT NULL,
+        visibility tinyint(1) unsigned NOT NULL,
+        time datetime DEFAULT '1000-01-01 00:00:00' NOT NULL,
         PRIMARY KEY  (ID),
-        KEY idx_user_id (user_id)
+        UNIQUE idx_user_id_title (user_id, list_title)
     ) %s;";
     create_db_table('kbp_favorite_lists', $sql);
 

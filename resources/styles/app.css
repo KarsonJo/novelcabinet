@@ -179,6 +179,10 @@
         -webkit-text-fill-color: transparent;
     }
 
+    .rating-stars.no-rating::before {
+        content: "⭐";
+    }
+
     /* ==================== Loading fade ==================== */
     
     .loader-fade {
@@ -214,7 +218,7 @@
 
     /* ==================== Card border ==================== */
     .card-bd1 {
-        @apply rounded-lg bg-slate-50 shadow-lg border-t-4 border-theme-bg1 border-solid relative;
+        @apply rounded-lg shadow-lg border-t-4 border-theme-bg1 border-solid;
     }
 
     .card-bd2 {

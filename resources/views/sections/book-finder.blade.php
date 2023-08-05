@@ -1,7 +1,7 @@
 <div class="tag.book-filter flex min-h-screen mx-xfit-lg gap-5 my-5 sm:my-8">
     {{-- the filter --}}
     {{-- background --}}
-    <section class="tag.top-bar z-10 lg:w-80 max-lg:fixed">
+    <section class="tag.top-bar z-50 lg:w-80 max-lg:fixed">
         <input class="hidden peer" type="checkbox" value="checked" id="filter-state">
         {{-- filte toggle btn --}}
         <label class="tag.filter-toggle fixed bottom-4 right-4 w-12 h-12 rounded-full bg-theme-bg1 cursor-pointer lg:hidden" for="filter-state">
@@ -48,14 +48,14 @@
                             <label class="mt-px cursor-pointer select-none" for="{{ $id }}">内容</label>
                         </div> --}}
                             <div class="">
-                                <input class="hidden peer" type="checkbox" name="{{ $item['queryKey']}}" value="{{ $item['value'] }}" id="{{ $item['queryKey']}}-{{ $item['value'] }}">
+                                <input class="hidden peer" type="checkbox" name="{{ $item['queryKey'] }}" value="{{ $item['value'] }}" id="{{ $item['queryKey'] }}-{{ $item['value'] }}">
                                 <label class="px-4 py-2 rounded-full border border-quaternary border-opacity-25 bg-theme-bg1 bg-opacity-0 flex items-center gap-2 cursor-pointer
-                            hover:backdrop-contrast-90 active:bg-opacity-100 peer-checked:text-theme-fg1 peer-checked:bg-opacity-75 peer-checked:[&_.close-btn]:block" for="{{ $item['queryKey']}}-{{ $item['value'] }}">
+                            hover:backdrop-contrast-90 active:bg-opacity-100 peer-checked:text-theme-fg1 peer-checked:bg-opacity-75 peer-checked:[&_.close-btn]:block" for="{{ $item['queryKey'] }}-{{ $item['value'] }}">
                                     <span class="">
                                         {{ $item['content'] }}
                                     </span>
                                     <div class="close-btn rounded-full w-3 h-3 hidden">
-                                        <x-close-button></x-close-button>
+                                        <x-close-button />
                                     </div>
                                 </label>
                             </div>
@@ -76,11 +76,9 @@
             <div class="tag.active-btn-tpl hidden">
                 <input class="hidden peer" type="checkbox" value="checked" name="eee" id="active-template">
                 <label class="group px-3 py-1 rounded-full bg-quaternary-bg bg-opacity-25 border-quaternary-bg border text-sm text-secondary flex items-center gap-2 cursor-pointer hover:backdrop-contrast-90 hover:text-theme-bg1" for="active-template">
-                    <span class="">
-                        TPL
-                    </span>
+                    <span class="">TPL</span>
                     <div class="close-btn rounded-full w-2 h-2 text-quinary group-hover:text-theme-bg1">
-                        <x-close-button></x-close-button>
+                        <x-close-button />
                     </div>
                 </label>
             </div>

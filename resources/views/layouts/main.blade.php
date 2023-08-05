@@ -5,4 +5,5 @@
 
 <div class="document relative min-h-screen">
     @yield('mainpage')
+    @include('partials.modules.alert-popup')
 </div>

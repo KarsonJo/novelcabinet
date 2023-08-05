@@ -198,7 +198,7 @@ function generateContentUrl() {
 }
 
 async function requestForNewContent(href) {
-    const header = new Headers({ "Content-Type": "text/html" })
+    const header = new Headers({ "Accept": "text/html" })
     try {
         // 计数
         ++requestCount;

@@ -2,6 +2,7 @@
 
 namespace KarsonJo\BookPost;
 
+use DateTime;
 use KarsonJo\BookPost\SqlQuery\BookFilterBuilder;
 use PHP_CodeSniffer\Reports\Full;
 use WP;
@@ -124,12 +125,17 @@ class Book
     public string $title;
     public string $author;
     public string $excerpt;
+    public ?DateTime $updateTime;
     /**
      * Book类型的Genre Taxonomy
      */
     public array $genres;
 
     public float $rating;
+    /**
+     * 评分权重，可用作记录评分人数等
+     */
+    public int $ratingWeight;
     public int $wordCount;
 
     /**
@@ -172,20 +178,16 @@ class Book
         // $_post->post_type = KBP_BOOK;
         $book->ID = $params['ID'];
         // $book->_post = $_post;
+        // print_r($params);
 
-        if (array_key_exists('post_title', $params))
-            $book->title = $params['post_title'];
+        $book->title = $params['post_title'] ?? '';
+        $book->excerpt = $params['post_excerpt'] ?? '';
+        $book->updateTime = isset($params['update_date']) ? DateTime::createFromFormat('Y-m-d G:i:s', $params['update_date']) : null;
+        $book->rating = round($params['rating'], 2) ?? 0;
+        $book->ratingWeight = $params['rating_weight'] ?? 0;
+        $book->wordCount = $params['word_count'] ?? 0;
 
-        if (array_key_exists('post_excerpt', $params))
-            $book->excerpt = $params['post_excerpt'];
-
-        if (array_key_exists('rating', $params))
-            $book->rating = $params['rating'] ?? 0;
-
-        if (array_key_exists('word_count', $params))
-            $book->wordCount = $params['word_count'] ?? 0;
-
-        if (array_key_exists('post_author', $params))
+        if (isset($params['post_author']))
             $book->author = get_the_author_meta('display_name', $params['post_author']);
 
         // 获取额外信息
@@ -213,14 +215,12 @@ class Book
 
     public function __get($name)
     {
-        print_r(123);
         // Check if the property is not already loaded
         if ($name === 'contents') {
             if ($this->ID === null)
                 return null;
 
             if ($this->_contents == null) {
-                print_r(456);
                 $this->_contents = new BookContents($this->ID);
             }
             return $this->_contents;

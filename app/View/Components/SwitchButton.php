@@ -4,19 +4,15 @@ namespace App\View\Components;
 
 use Illuminate\View\Component;
 
-class Checkbox1 extends Component
+class SwitchButton extends Component
 {
     /**
      * Create a new component instance.
      *
      * @return void
      */
-    public function __construct(
-        public ?string $id = null,
-        public ?string $name = null,
-        public string $value = "checked",
-        public $checked = false,
-    ) {
+    public function __construct(public ?string $id = null, public ?string $name = null)
+    {
         if ($this->id === null)
             $this->id = 'rand-' . \mt_rand();
         if ($this->name === null)
@@ -30,6 +26,6 @@ class Checkbox1 extends Component
      */
     public function render()
     {
-        return view('components.checkbox1');
+        return view('components.switch-button');
     }
 }

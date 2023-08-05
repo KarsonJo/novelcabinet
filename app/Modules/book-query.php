@@ -80,17 +80,6 @@ namespace KarsonJo\BookPost {
     }
 
     /**
-     * 筛选书籍
-     */
-    function get_book_by_filter()
-    {
-        // BD::class
-    }
-
-
-
-
-    /**
      * 获取书籍
      * @param array|int $param WordPress查询args，或者代表查询个数的int
      * @param int $paged 页码
@@ -149,6 +138,325 @@ namespace KarsonJo\BookPost {
 
 namespace KarsonJo\BookPost\SqlQuery {
 
+    use Exception;
+    use KarsonJo\BookPost\Book;
+    use KarsonJo\BookPost\PostCache\CacheBuilder;
+    use KarsonJo\BookPost\QueryException;
+    use TenQuality\WP\Database\QueryBuilder;
+    use WP_Post;
+    use WP_User;
+
+
+    use function KarsonJo\BookPost\PostCache\get_or_set_cache;
+
+    /**
+     * 传入false时抛出$wpdb->last_error异常
+     */
+    function check_wpdb_result($result)
+    {
+        global $wpdb;
+        if ($result === false)
+            throw QueryException::wpdbException($wpdb->last_error);
+    }
+
+    /**
+     * 获取用户的所有收藏夹
+     * 如果给定文章ID，则还会返回收藏夹是否收藏该文章的情况
+     * @param int[] $visibility 可见性集合，默认为全部
+     * @return stdClass[]|false 字段：ID, list_title[, in_fav]
+     */
+    function get_user_favorite_lists(WP_User|int $user, array $visibility = null, WP_Post|int $post = 0): array|false
+    {
+        if ($post instanceof WP_Post) $post = $post->ID;
+        if ($user instanceof WP_User) $user = $user->ID;
+        if (!$user) return false;
+
+        // 用户的所有收藏夹
+        //select ID, list_title from wp_kbp_favorite_lists where user_id=1;
+        // 
+        /**
+         * 用户所有收藏夹，并关联某post(9)的收藏情况 
+         * select ID, list_title, CASE WHEN post_id IS NULL THEN 0 ELSE 1 END in_fav 
+         * from wp_kbp_favorite_lists l 
+         * left join wp_kbp_favorite_relationships r on l.ID = r.list_id and r.post_id = 9 
+         * where user_id=1;
+         */
+        $res = QueryBuilder::create()->select('ID')->select('list_title')->from('kbp_favorite_lists l')->where(['user_id' => $user]);
+        if ($visibility)
+            $res->where([
+                'visibility' => ['operator' => 'IN', 'value' => $visibility]
+            ]);
+        if ($post) {
+            $res->join('kbp_favorite_relationships r', [
+                ['key_a' => 'l.ID', 'key_b' => 'r.list_id'],
+                ['key_a' => 'r.post_id', 'key_b' => $post],
+            ], 'LEFT')
+                ->select('CASE WHEN r.post_id IS NULL THEN 0 ELSE 1 END in_fav');
+        }
+        return $res->get();
+    }
+
+    /**
+     * 获取用户所有包含当前文章的收藏夹
+     * @return stdClass[]|false 字段：ID, list_title
+     */
+    function get_user_post_favorite(WP_Post|int $post, WP_User|int $user, array $visibility = null): array|false
+    {
+        if ($post instanceof WP_Post) $post = $post->ID;
+        if ($user instanceof WP_User) $user = $user->ID;
+        if (!$user || !$post) return false;
+
+        $res = QueryBuilder::create()
+            ->select('ID')->select('list_title')
+            ->from('kbp_favorite_lists l')
+            ->join('kbp_favorite_relationships r', [['key_a' => 'l.ID', 'key_b' => 'r.list_id']], 'INNER')
+            ->where(['l.user_id' => $user, 'r.post_id' => $post]);
+
+        if ($visibility)
+            $res->where([
+                'visibility' => ['operator' => 'IN', 'value' => $visibility]
+            ]);
+
+        return $res->get();
+    }
+
+    /**
+     * 更新用户对某篇文章的收藏情况为给定列表
+     * @param int[] $fav_list 这篇文章的所有收藏夹id
+     */
+    function update_user_post_favorite(WP_Post|int $post, WP_User|int $user, array $fav_lists_id): bool
+    {
+        if ($post instanceof WP_Post) $post = $post->ID;
+        if ($user instanceof WP_User) $user = $user->ID;
+
+        // 用户的所有收藏夹
+        $all_fav_lists = get_user_favorite_lists($user, null, $post);
+        $all_fav_lists_id = array_map(fn ($item) => $item->ID, $all_fav_lists);
+
+        // 用户含有当前文章的收藏夹
+        $post_fav_lists = array_filter($all_fav_lists, fn ($item) => $item->in_fav);
+        $post_fav_lists_id = array_map(fn ($item) => $item->ID, $post_fav_lists);
+
+        //限制在用户所拥有的的列表范围
+        $fav_lists_id = array_intersect($fav_lists_id, $all_fav_lists_id);
+
+        //计算差异集合
+        $added = array_diff($fav_lists_id, $post_fav_lists_id);
+        $removed = array_diff($post_fav_lists_id, $fav_lists_id);
+
+        if (!$added && !$removed)
+            return true;
+
+        try {
+            global $wpdb;
+            $wpdb->query('START TRANSACTION');
+
+            if ($added) {
+                $table_fav = $wpdb->prefix . 'kbp_favorite_relationships';
+
+                // https://stackoverflow.com/questions/12373903/wordpress-wpdb-insert-multiple-records
+                $values = implode(',', array_map(fn ($list_id) => $wpdb->prepare('(%d,%d)', $list_id, $post), $added));
+                // print_r("adding");
+                // 插入现有的
+                // insert into wp_kbp_favorite_relationships(post_id,list_id) values(1,1) on duplicate key update post_id=post_id;
+                $result = $wpdb->query("
+                INSERT  INTO $table_fav (list_id, post_id)
+                VALUES  $values 
+                ON DUPLICATE KEY
+                UPDATE  list_id=list_id;");
+
+                // print_r($result === false ? "false" : "true");
+
+                check_wpdb_result($result);
+            }
+            // print_r("hello");
+            if ($removed) {
+                $table_fav_relationships = $wpdb->prefix . 'kbp_favorite_relationships';
+
+                // print_r($removed);
+                $values = implode(',', array_map(fn ($list_id) => $wpdb->prepare('%d', $list_id), $removed));
+                // print_r("removing");
+                // print_r($values);
+                // print_r($wpdb->prepare("
+                // DELETE  FROM $table_fav_relationships
+                // WHERE   post_id = %d and list_id in ($values);", $post));
+
+                $result = $wpdb->query($wpdb->prepare("
+                DELETE  FROM $table_fav_relationships
+                WHERE   post_id = %d and list_id in ($values);", $post));
+
+                // print_r($result === false ? "false" : "true");
+
+                check_wpdb_result($result);
+            }
+
+            $wpdb->query('COMMIT');
+        } catch (Exception $e) {
+            $wpdb->query('ROLLBACK');
+            throw $e;
+        }
+        return true;
+    }
+
+    /**
+     * 添加用户收藏夹
+     * 用户不存在返回false，其它执行失败时抛出异常
+     * @param int $visibility 列表的公开可见性 0: 私有 1: 公开，其它待定
+     * @return int 新建收藏夹的ID，失败时抛出异常
+     */
+    function create_user_favorite_list(WP_User|int $user, string $title, int $visibility = 0): int
+    {
+        if ($user instanceof WP_User) $user = $user->ID;
+        if (!$user) return false;
+
+        //最大长度[todo]:变成option
+        $len = strlen($title);
+        if ($len > 20 || $len <= 0)
+            throw QueryException::fieldOutOfRange();
+
+        try {
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'kbp_favorite_lists';
+            $result = $wpdb->query($wpdb->prepare("
+                insert into $table_name (user_id, list_title, visibility)
+                values      (%d, %s, %d)", $user, $title, $visibility));
+
+            check_wpdb_result($result);
+
+            return $wpdb->get_var("SELECT LAST_INSERT_ID()");
+        } catch (Exception $e) {
+            throw $e;
+        }
+    }
+
+    /**
+     * 获取某篇文章的收藏用户数
+     * 不建议在循环中使用
+     */
+    function get_favorite_count(WP_Post|int $id)
+    {
+        if ($id instanceof WP_Post) $id = $id->ID;
+
+        // 尝试从wp缓存中读取
+        $key = "book-$id-fav-count";
+        $callback = fn () => QueryBuilder::create()
+            ->from('kbp_favorite_lists f')
+            ->join('kbp_favorite_relationships r', [['key_a' => 'f.id', 'key_b' => 'r.list_id']], 'INNER')
+            ->where(['r.post_id' => $id])
+            ->count('distinct user_id');
+
+        return get_or_set_cache($key, KBP_CACHE_DOMAIN, $callback);
+    }
+
+    /**
+     * 获取用户对某文章的评分
+     */
+    function get_book_user_rating(WP_Post|int $post, WP_User|int $user = 0): string|null
+    {
+        if ($post instanceof WP_Post) $post = $post->ID;
+
+        if (!$user) $user = wp_get_current_user();
+        if ($user instanceof WP_User) $user = $user->ID;
+        if (!$user) return false;
+
+        $key = "book-$post-user-$user-rating";
+        $callback = fn () => QueryBuilder::create()
+            ->select('rating')
+            ->from('kbp_rating')
+            ->where(['post_id' => $post, 'user_id' => $user])
+            ->value();
+
+        return get_or_set_cache($key, KBP_CACHE_DOMAIN, $callback);
+    }
+
+    /**
+     * 获取文章的评分
+     * @return
+     */
+    function get_book_rating(WP_Post|int $post): string|null
+    {
+        if ($post instanceof WP_Post) $post = $post->ID;
+
+        $key = "book-$post-rating";
+        $callback = fn () => QueryBuilder::create()->select('rating_avg')->from('kbp_postmeta')->where(['post_id' => $post])->value();
+
+        return get_or_set_cache($key, KBP_CACHE_DOMAIN, $callback);
+    }
+
+    /**
+     * 设置用户对文章的评分
+     */
+    function set_book_rating(WP_Post|int $post, WP_User|int $user, float $rating)
+    {
+        if ($post instanceof WP_Post) $post = $post->ID;
+        if (is_int($user)) $user = get_user_by('id', $user);
+
+        if (!$user)
+            return false;
+
+        if (!is_numeric($rating))
+            return false;
+
+        $role_weight = [
+            'administrator' => 10000,
+            'editor' => 3,
+            'author' => 3,
+            'contributor' => 1,
+            'subscriber' => 1,
+        ];
+
+        $weight = $role_weight[$user->roles[0]] ?? 1;
+        $rating = floatval($rating);
+        $weighted_rating = $weight * $rating;
+        // echo $rating;
+        // return;
+
+        // $record = QueryBuilder::create()
+        // ->from('kbp_rating')
+        // ->where([
+        //     ['post_id' => $post],
+        //     ['user_id' => $user->ID],
+        // ])
+        // ->count();
+
+        // // 已经有记录了
+        // if ($record > 0)
+        //     return false;
+
+        try {
+            global $wpdb;
+            $wpdb->query('START TRANSACTION');
+
+            // 更新加权评分(10000, 9.6) + (1, 7)：UPDATE test SET weight = weight + 1, rating = (rating * weight + 7) / (weight + 1) WHERE id = 1; 
+
+            // INSERT INTO test (id, weight, rating) VALUES (1, 1, 7)
+            // ON DUPLICATE KEY UPDATE weight = weight + 1, rating = (rating * weight + 7) / (weight + 1);
+
+            // 插入评分表
+            $table_rating = $wpdb->prefix . 'kbp_rating';
+            $result = $wpdb->query($wpdb->prepare("
+            insert into $table_rating (post_id, user_id, rating, weight, time)
+            values      (%d, %d, %f, %d, %s)", $post, $user->ID, $rating, $weight, gmdate('Y-m-d H:i:s')));
+
+            check_wpdb_result($result);
+
+            // 更新加权评分
+            $table_posts = $wpdb->prefix . 'kbp_postmeta';
+            $result = $wpdb->query($wpdb->prepare("
+            insert into $table_posts (post_id, rating_weight, rating_avg)
+            values      (%d, %d, %f)
+            on duplicate key
+            update      rating_avg = (rating_avg * rating_weight + %f) / (rating_weight + %d),
+            rating_weight = rating_weight + %d;", $post, $weight, $rating, $weighted_rating, $weight, $weight));
+
+            check_wpdb_result($result);
+
+            $wpdb->query('COMMIT');
+        } catch (Exception $e) {
+            $wpdb->query('ROLLBACK');
+            throw $e;
+        }
+    }
 
     /**
      * query cheatsheet
@@ -179,13 +487,13 @@ namespace KarsonJo\BookPost\SqlQuery {
      * 
      * 查询某用户收藏夹
      * select post_title, list_title from wp_posts posts inner join wp_kbp_favorite_relationships fav_r on posts.ID = fav_r.post_id join wp_kbp_favorite_lists fav_l on fav_r.list_id = fav_l.ID where fav_l.user_id = 1;
+     *
+     * 查询文章表中某篇文章对应用户收藏数
+     * SELECT COUNT(DISTINCT user_id) AS num_of_users FROM wp_kbp_favorite_lists F INNER JOIN wp_kbp_favorite_relationships R ON F.id = R.list_id WHERE R.post_id = '9';
+     * 
+     * 查询“文章表”中所有文章ID的对应用户收藏数（同用户多次收藏去重）
+     * SELECT P.ID AS post_id, COUNT(DISTINCT F.user_id) AS num_of_users FROM wp_posts P LEFT JOIN wp_kbp_favorite_relationships R ON P.ID = R.post_id LEFT JOIN wp_kbp_favorite_lists F ON R.list_id = F.ID GROUP BY P.ID HAVING num_of_users > 0;
      */
-
-    use Illuminate\Http\Middleware\TrustProxies;
-    use KarsonJo\BookPost\Book;
-    use TenQuality\WP\Database\QueryBuilder;
-    use Termwind\Components\Raw;
-    use WP_Post;
 
     class BookFilterBuilder extends QueryBuilder
     {
@@ -422,9 +730,7 @@ namespace KarsonJo\BookPost\SqlQuery {
             $this->builder['select'] = []; //clear select
             $result = $this->select('posts.*')->get();
 
-            return array_map(function ($record) {
-                return new WP_Post($record);
-            }, $result);
+            return array_map(fn ($record) => new WP_Post($record), $result);
         }
 
         /**
@@ -443,153 +749,162 @@ namespace KarsonJo\BookPost\SqlQuery {
                 ->select('posts.post_author')
                 ->select('posts.post_title')
                 ->select('posts.post_excerpt')
-                ->select('posts.post_date')
+                ->select('posts.post_modified update_date')
+                ->select('mt.rating_weight')
                 ->select('mt.rating_avg rating')
                 ->select('mt.word_count')
                 ->get();
 
             // if ($with_meta || $with_thumbnail || $with_book_taxonomy)
-            $post_ids = array_map(function ($record) {
-                return $record->ID;
-            }, $result);
-            $this->cache_posts($post_ids);
+            $post_ids = array_map(fn ($record) => $record->ID, $result);
 
+            $cacher = CacheBuilder::create();
+
+            $cacher->cachePosts($post_ids);
             if ($with_meta)
-                $this->cache_postmeta($post_ids);
-
+                $cacher->cachePostmeta($post_ids);
             if ($with_thumbnail)
-                $this->cache_thumbnail_status($post_ids);
-
+                $cacher->cacheThumbnailStatus($post_ids);
             if ($with_book_taxonomy)
-                $this->cache_taxonomy($post_ids);
-            // update_object_term_cache($post_ids, KBP_BOOK);
+                $cacher->cacheTaxonomy($post_ids);
 
-            $this->build_cache();
+            $cacher->cache();
 
-            return array_map(function ($record) {
-                return Book::initBookFromObject($record);
-            }, $result);
+            // $this->cache_posts($post_ids);
+
+            // if ($with_meta)
+            //     $this->cache_postmeta($post_ids);
+
+            // if ($with_thumbnail)
+            //     $this->cache_thumbnail_status($post_ids);
+
+            // if ($with_book_taxonomy)
+            //     $this->cache_taxonomy($post_ids);
+
+            // $this->build_cache();
+
+            return array_map(fn ($record) => Book::initBookFromObject($record), $result);
             // return [];
         }
 
         //==================================================
         // 简单的预缓存支持
 
-        protected $cached;
+        // protected $cached;
 
-        protected function prepare_cache(string $key, array &$value)
-        {
-            // if ($key == 'posts') {
-            //     print_r('[prepare_cache]');
-            //     print_r("[$key]");
-            //     print_r($value);
-            //     print_r(isset($this->cached[$key]) ? $this->cached[$key] : "[empty]");
-            // }
+        // protected function prepare_cache(string $key, array &$value)
+        // {
+        //     // if ($key == 'posts') {
+        //     //     print_r('[prepare_cache]');
+        //     //     print_r("[$key]");
+        //     //     print_r($value);
+        //     //     print_r(isset($this->cached[$key]) ? $this->cached[$key] : "[empty]");
+        //     // }
 
-            if (!isset($this->cached[$key]))
-                $this->cached[$key] = [];
+        //     if (!isset($this->cached[$key]))
+        //         $this->cached[$key] = [];
 
-            foreach ($value as $var)
-                if (!isset($this->cached[$key][$var]))
-                    $this->cached[$key][$var] = $var;
+        //     foreach ($value as $var)
+        //         if (!isset($this->cached[$key][$var]))
+        //             $this->cached[$key][$var] = $var;
 
-            // if ($key == 'posts') {
-            //     print_r(isset($this->cached[$key]) ? $this->cached[$key] : "[empty]");
-            // }
-        }
+        //     // if ($key == 'posts') {
+        //     //     print_r(isset($this->cached[$key]) ? $this->cached[$key] : "[empty]");
+        //     // }
+        // }
 
-        protected function cache_posts(array &$post_ids)
-        {
-            // get_posts([
-            //     'include' => $post_ids,
-            //     // 'post_type' => 'attachment',
-            // ]);
-            // $this->cached['posts'] += $post_ids;
-            $this->prepare_cache('posts', $post_ids);
-        }
+        // protected function cache_posts(array &$post_ids)
+        // {
+        //     // get_posts([
+        //     //     'include' => $post_ids,
+        //     //     // 'post_type' => 'attachment',
+        //     // ]);
+        //     // $this->cached['posts'] += $post_ids;
+        //     $this->prepare_cache('posts', $post_ids);
+        // }
 
-        /**
-         * 统一缓存所有给定文章的postmeta
-         * https://hitchhackerguide.com/2011/11/01/reducing-postmeta-queries-with-update_meta_cache/
-         * @param int[] &$post_ids
-         */
-        protected function cache_postmeta(array &$post_ids)
-        {
-            // update_meta_cache('post', $post_ids);
-            $this->prepare_cache('postmeta', $post_ids);
-        }
+        // /**
+        //  * 统一缓存所有给定文章的postmeta
+        //  * https://hitchhackerguide.com/2011/11/01/reducing-postmeta-queries-with-update_meta_cache/
+        //  * @param int[] &$post_ids
+        //  */
+        // protected function cache_postmeta(array &$post_ids)
+        // {
+        //     // update_meta_cache('post', $post_ids);
+        //     $this->prepare_cache('postmeta', $post_ids);
+        // }
 
-        /**
-         * 统一缓存给定文章的特色图片状态
-         * thumbnail post + postmeta
-         * @param int[] &$post_ids
-         */
-        protected function cache_thumbnail_status(array &$post_ids)
-        {
-            // //必须先查metadata
-            // $this->cache_postmeta($post_ids);
-            // // 获取所有特色图片的id
-            // $thumb_ids = array_map(function ($post_id) {
-            //     return (int) get_post_meta($post_id, '_thumbnail_id', true);
-            // }, $post_ids);
-            // // 缓存所有特色图片所对应的文章（统一查询一遍）
-            // get_posts([
-            //     'include' => $thumb_ids,
-            //     'post_type' => 'attachment',
-            // ]);
-            // // 缓存所有的postmeta                
-            // $this->cache_postmeta($thumb_ids);
+        // /**
+        //  * 统一缓存给定文章的特色图片状态
+        //  * thumbnail post + postmeta
+        //  * @param int[] &$post_ids
+        //  */
+        // protected function cache_thumbnail_status(array &$post_ids)
+        // {
+        //     // //必须先查metadata
+        //     // $this->cache_postmeta($post_ids);
+        //     // // 获取所有特色图片的id
+        //     // $thumb_ids = array_map(function ($post_id) {
+        //     //     return (int) get_post_meta($post_id, '_thumbnail_id', true);
+        //     // }, $post_ids);
+        //     // // 缓存所有特色图片所对应的文章（统一查询一遍）
+        //     // get_posts([
+        //     //     'include' => $thumb_ids,
+        //     //     'post_type' => 'attachment',
+        //     // ]);
+        //     // // 缓存所有的postmeta                
+        //     // $this->cache_postmeta($thumb_ids);
 
-            // $this->cached['postmeta'] += $post_ids;
-            $this->prepare_cache('thumbnail', $post_ids);
-        }
+        //     // $this->cached['postmeta'] += $post_ids;
+        //     $this->prepare_cache('thumbnail', $post_ids);
+        // }
 
-        /**
-            
-         * 统一所有给定文章作为[object_type]类型的“所有”taxonomy
-         * @param int[] &$post_ids
-         */
-        protected function cache_taxonomy(array &$post_ids)
-        {
-            // update_object_term_cache($post_ids, $object_type);
-            $this->prepare_cache('taxonomy', $post_ids);
-        }
+        // /**
 
-        protected function build_cache()
-        {
-            // print_r('[build_cache]');
-            // postmeta
-            if (isset($this->cached['postmeta']) || isset($this->cached['thumbnail'])) {
-                $posts = $this->cached['postmeta'] + $this->cached['thumbnail'];
-                update_meta_cache('post', $posts);
-                // print_r('[build_cache]');
-            }
+        //  * 统一所有给定文章作为[object_type]类型的“所有”taxonomy
+        //  * @param int[] &$post_ids
+        //  */
+        // protected function cache_taxonomy(array &$post_ids)
+        // {
+        //     // update_object_term_cache($post_ids, $object_type);
+        //     $this->prepare_cache('taxonomy', $post_ids);
+        // }
 
-            if (isset($this->cached['thumbnail'])) {
-                // 需要获取postmeta
-                $thumb_ids = array_map(function ($post_id) {
-                    return (int) get_post_meta($post_id, '_thumbnail_id', true);
-                }, $this->cached['thumbnail']);
+        // protected function build_cache()
+        // {
+        //     // print_r('[build_cache]');
+        //     // postmeta
+        //     if (isset($this->cached['postmeta']) || isset($this->cached['thumbnail'])) {
+        //         $posts = $this->cached['postmeta'] + $this->cached['thumbnail'];
+        //         update_meta_cache('post', $posts);
+        //         // print_r('[build_cache]');
+        //     }
 
-                // 缓存post
-                // $this->cached['posts'] += $thumb_ids;
-                $this->prepare_cache('posts', $thumb_ids);
-                // print_r($this->cached['posts']);
-                // 再次缓存postmeta
-                update_meta_cache('post', $thumb_ids);
-            }
+        //     if (isset($this->cached['thumbnail'])) {
+        //         // 需要获取postmeta
+        //         $thumb_ids = array_map(function ($post_id) {
+        //             return (int) get_post_meta($post_id, '_thumbnail_id', true);
+        //         }, $this->cached['thumbnail']);
 
-            if (isset($this->cached['posts']))
-                // $this->cache_posts($cached['posts']);
-                get_posts([
-                    'include' => $this->cached['posts'],
-                    'post_type' => 'any',
-                    'post_status' => 'any',
-                ]);
+        //         // 缓存post
+        //         // $this->cached['posts'] += $thumb_ids;
+        //         $this->prepare_cache('posts', $thumb_ids);
+        //         // print_r($this->cached['posts']);
+        //         // 再次缓存postmeta
+        //         update_meta_cache('post', $thumb_ids);
+        //     }
 
-            if (isset($this->cached['taxonomy']))
-                update_object_term_cache($this->cached['taxonomy'], KBP_BOOK);
-        }
+        //     if (isset($this->cached['posts']))
+        //         // $this->cache_posts($cached['posts']);
+        //         get_posts([
+        //             'include' => $this->cached['posts'],
+        //             'post_type' => 'any',
+        //             'post_status' => 'any',
+        //         ]);
+
+        //     if (isset($this->cached['taxonomy']))
+        //         update_object_term_cache($this->cached['taxonomy'], KBP_BOOK);
+        // }
 
 
         //==================================================
