@@ -1,13 +1,7 @@
 import { ResponseError } from "@scripts/errors.mjs"
+import { basicHeader, restDomain } from "./rest-utility.mjs"
 
-function basicHeader() {
-    return new Headers({
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-WP-Nonce": wpApiSettings.nonce
-    })
-}
-
+const namespace = restDomain("kbp", "v1")
 
 /**
  * 请求为当前用户创建收藏夹
@@ -16,8 +10,8 @@ function basicHeader() {
  * @returns {Promise<any>} json
  */
 export async function createFavoriteList(title, visibility) {
-    const href = "/wp-json/kbp/v1/fav/create"
-    const headers = basicHeader()
+    const href = `${namespace}/fav/create`
+    const headers = basicHeader
     // 请求
     return await fetch(href, {
         method: 'POST',
@@ -30,14 +24,13 @@ export async function createFavoriteList(title, visibility) {
 }
 
 /**
- * 
  * @param {number} postId 
  * @param {Array} favLists 
  * @returns 
  */
 export async function updatePostFavorite(postId, favLists) {
-    const href = "/wp-json/kbp/v1/post-fav/update/" + postId
-    const headers = basicHeader()
+    const href = `${namespace}/post-fav/update/${postId}`
+    const headers = basicHeader
     // 请求
     return await fetch(href, {
         method: 'POST',
@@ -47,3 +40,4 @@ export async function updatePostFavorite(postId, favLists) {
         headers: headers
     })
 }
+

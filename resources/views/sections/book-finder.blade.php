@@ -27,39 +27,41 @@
             <section class="tag.filter-block">
                 @foreach ($filters as $filter)
                     {{-- header --}}
-                    <input class="hidden peer" type="checkbox" value="checked" id="filter-{{ $filter['key'] }}">
-                    <label class="p-3 flex items-center justify-between bg-theme-bg1 text-theme-fg1 font-semibold bg-opacity-5 cursor-pointer hover:bg-opacity-20
-                peer-checked:[&_.vtoggle]:rotate-180" for="filter-{{ $filter['key'] }}">
-                        <div class="tag.filter-title line-clamp-2">
-                            {{ $filter['title'] }}
-                        </div>
-                        <div class="vtoggle h-full aspect-square flex justify-center items-center origin-center transition-transform duration-200">
-                            <i class="arrow up border-theme-bg1"></i>
-                        </div>
-                    </label>
+                    <div class="">
+                        <input class="hidden peer" type="checkbox" value="checked" id="filter-{{ $filter['key'] }}">
+                        <label class="p-3 flex items-center justify-between bg-theme-bg1 text-theme-fg1 font-semibold bg-opacity-5 cursor-pointer hover:bg-opacity-20
+                        peer-checked:[&_.vtoggle]:rotate-180" for="filter-{{ $filter['key'] }}">
+                            <div class="tag.filter-title line-clamp-2">
+                                {{ $filter['title'] }}
+                            </div>
+                            <div class="vtoggle h-full aspect-square flex justify-center items-center origin-center transition-transform duration-200">
+                                <i class="arrow up border-theme-bg1"></i>
+                            </div>
+                        </label>
 
-                    {{-- option list --}}
-                    <div class="tag.filter-list-{{ $filter['key'] }} p-3 peer-checked:hidden text-tertiary text-sm flex gap-2 flex-wrap">
-                        @foreach ($filter['items'] as $item)
-                            {{-- <div class="tag.filter-item flex gap-2 items-center">
+                        {{-- option list --}}
+                        <div class="tag.filter-list-{{ $filter['key'] }} p-3 peer-checked:hidden text-tertiary text-sm flex gap-2 flex-wrap">
+                            @foreach ($filter['items'] as $item)
+                                {{-- <div class="tag.filter-item flex gap-2 items-center">
                             <div class="w-4 h-4">
                                 <x-checkbox1 :dom-id="$id" />
                             </div>
                             <label class="mt-px cursor-pointer select-none" for="{{ $id }}">内容</label>
                         </div> --}}
-                            <div class="">
-                                <input class="hidden peer" type="checkbox" name="{{ $item['queryKey'] }}" value="{{ $item['value'] }}" id="{{ $item['queryKey'] }}-{{ $item['value'] }}">
-                                <label class="px-4 py-2 rounded-full border border-quaternary border-opacity-25 bg-theme-bg1 bg-opacity-0 flex items-center gap-2 cursor-pointer
+                                <div class="">
+                                    <input class="hidden peer" type="checkbox" name="{{ $item['queryKey'] }}" value="{{ $item['value'] }}" id="{{ $item['queryKey'] }}-{{ $item['value'] }}">
+                                    <label class="px-4 py-2 rounded-full border border-quaternary border-opacity-25 bg-theme-bg1 bg-opacity-0 flex items-center gap-2 cursor-pointer
                             hover:backdrop-contrast-90 active:bg-opacity-100 peer-checked:text-theme-fg1 peer-checked:bg-opacity-75 peer-checked:[&_.close-btn]:block" for="{{ $item['queryKey'] }}-{{ $item['value'] }}">
-                                    <span class="">
-                                        {{ $item['content'] }}
-                                    </span>
-                                    <div class="close-btn rounded-full w-3 h-3 hidden">
-                                        <x-close-button />
-                                    </div>
-                                </label>
-                            </div>
-                        @endforeach
+                                        <span class="">
+                                            {{ $item['content'] }}
+                                        </span>
+                                        <div class="close-btn rounded-full w-3 h-3 hidden">
+                                            <x-close-button />
+                                        </div>
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
                 @endforeach
 
@@ -88,7 +90,7 @@
             {{-- @php($books = KarsonJo\BookPost\SqlQuery\BookFilterBuilder::create()->limit(6)->paged(1)->get_as_book()) --}}
             {{-- @php($books = TenQuality\WP\Database\QueryBuilder::create()->select('post_title')->from('posts')->get()) --}}
             <x-book-list-main :book-posts="$books" />
-            <div class="absolute inset-0">
+            <div class="absolute inset-0 pointer-events-none">
 
                 <i class="tag.filter-loader loader-fade sticky top-0 mx-auto hidden text-theme-bg1 w-40 h-40"></i>
             </div>

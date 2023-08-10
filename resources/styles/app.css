@@ -27,9 +27,9 @@
         /* text color */
         --text-primary: 15 23 42; /*slate 900*/
         --text-secondary: 51 65 85; /*slate 700*/
-        --text-tertiary: 71 85 105; /*slate 600*/
-        --text-quaternary: 100 116 139; /*slate 500*/
-        --text-quinary: 195 198 209; /*slate 500*/
+        --text-tertiary: 107 114 128; /*gray 500*/
+        --text-quaternary: 156 163 175; /*gray 400*/
+        --text-quinary: 209 213 219; /*gray 300*/
 
         /* background color */
         --bg-primary: 255 255 255;
@@ -247,6 +247,27 @@
         /* transition: background-size; */
         /* margin: 5px 0; */
     }
+
+    /* ==================== dashboard nav ==================== */
+    /* 伪元素还是不适合用tailwind，太勾八长了 */
+    .inverse-rounded-right::before,
+    .inverse-rounded-right::after {
+        @apply absolute aspect-square right-0 h-1/2 transition;
+    }
+
+    .inverse-rounded-right::before {
+        @apply bottom-full;
+        mask-image: radial-gradient(farthest-side at 0 0, #0000 98%, #000 100%); /* 98%-100%抗锯齿 */
+        -webkit-mask-image: radial-gradient(farthest-side at 0 0, #0000 98%, #000 100%);
+    }
+
+    .inverse-rounded-right::after {
+        @apply top-full;
+        mask-image: radial-gradient(farthest-side at 0 100%, #0000 98%, #000 100%);
+        -webkit-mask-image: radial-gradient(farthest-side at 0 100%, #0000 98%, #000 100%);
+    }
+
+    
 
     .transition-underline-center {
         @apply transition-underline;

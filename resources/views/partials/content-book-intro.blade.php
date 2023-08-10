@@ -141,7 +141,9 @@
                                             <div class="flex justify-between items-center">
                                                 <div class="flex gap-2">
                                                     <span>公开</span>
-                                                    <x-switch-button name="visibility" id="fav-create-visibility" />
+                                                    <div class=" w-16 h-6">
+                                                        <x-switch-button name="visibility" id="fav-create-visibility" />
+                                                    </div>
                                                 </div>
                                                 <button class="tag.fav-create-submit shrink-0 rounded px-6 pb-2 pt-2.5 shadow-md transition duration-150 text-center bg-theme-bg1 text-theme-fg1 hover:saturate-150 active:saturate-200 disabled:saturate-0">确认</button>
                                             </div>

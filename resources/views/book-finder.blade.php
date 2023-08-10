@@ -3,7 +3,7 @@
 @extends('layouts.app')
 
 @section('content')
-  @while(have_posts()) @php(the_post())
+  {{-- @while(have_posts()) @php(the_post()) --}}
     @includeFirst(['sections.book-finder'])
-  @endwhile
+  {{-- @endwhile --}}
 @endsection

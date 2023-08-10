@@ -1,11 +1,13 @@
+import { asIterable } from "./dom-utils.mjs"
+
 // ==================== utility ====================
 const clickEvent = new Event('click', { bubbles: true })
 let abortSignal
 let requestCount = 0
 
-function asIterable(el) {
-    return el?.[Symbol.iterator] ? el : (el ? [el] : [])
-}
+// function asIterable(el) {
+//     return el?.[Symbol.iterator] ? el : (el ? [el] : [])
+// }
 
 // ==================== query selectors ====================
 

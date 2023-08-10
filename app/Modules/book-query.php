@@ -744,7 +744,7 @@ namespace KarsonJo\BookPost\SqlQuery {
         public function get_as_book(bool $with_meta = true, $with_thumbnail = true, $with_book_taxonomy = true): array
         {
             $this->builder['select'] = []; //clear select
-            $result = $this->select('posts.ID')
+            $result = $this->select('distinct posts.ID')
                 ->join('kbp_postmeta mt', [['key_a' => 'mt.post_id', 'key_b' => 'posts.ID']], 'LEFT')
                 ->select('posts.post_author')
                 ->select('posts.post_title')

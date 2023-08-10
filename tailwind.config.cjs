@@ -41,7 +41,7 @@ module.exports = {
         'peek-in-t-f': 'peek-in-t 0.4s',
         'peek-in-b-f': 'peek-in-b 0.4s',
         'rotate': 'spin 1s',
-        
+
       },
       keyframes: {
         'fade-in': {
@@ -124,17 +124,37 @@ module.exports = {
         'xfit-md': 'calc(max(1rem,20vw - 6rem))',
         'xfit-lg': 'calc(max(1rem,25vw - 15rem))',
       },
+      height: {
+        '1/10': '10%',
+      },
+      // boxShadow: {
+      //   'fill': '0 0 0 1px rgba(0, 0, 0, #000)'
+      // }
     },
   },
   plugins: [
     require('@tailwindcss/line-clamp'),
     require('@tailwindcss/typography'),
+    require('tailwind-scrollbar')({ nocompatible: true }),
     plugin(function ({ addVariant }) {
       addVariant('opened', '&.opened');
       addVariant('not-opened', '&:not(.opened)');
       addVariant('show', '&.show');
       addVariant('not-show', '&:not(.show)');
       addVariant('selected', '&.selected');
+      addVariant('success', '&.style-success');
+      addVariant('warning', '&.style-warning');
+      addVariant('error', '&.style-error');
+    }),
+    plugin(function ({ addUtilities }) {
+      addUtilities({
+        '.gutter-auto': {
+          'scrollbar-gutter': 'auto',
+        },
+        '.gutter-stable': {
+          'scrollbar-gutter': 'stable',
+        },
+      })
     }),
   ],
   safelist: [

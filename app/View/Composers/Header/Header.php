@@ -4,6 +4,9 @@ namespace App\View\Composers\Header;
 
 use Roots\Acorn\View\Composer;
 
+use function KarsonJo\BookRequest\get_user_login_url;
+use function NovelCabinet\Utility\home_url_trailingslashit;
+
 class Header extends Composer
 {
     /**
@@ -22,8 +25,20 @@ class Header extends Composer
      */
     public function with()
     {
+        $user = wp_get_current_user();
+        if ($user->ID) {
+            $signUrl = wp_logout_url(home_url_trailingslashit());
+            $sign = __('sign-out', 'NovelCabinet');
+        }
+        else {
+            $signUrl = get_user_login_url();
+            $sign = __('sign-in', 'NovelCabinet');
+        }
         return [
             'navBarItems' => $this->getNavigationItem('primary_navigation'),
+            'user' => wp_get_current_user(),
+            'signUrl' => $signUrl,
+            'sign' => $sign,
         ];
     }
 

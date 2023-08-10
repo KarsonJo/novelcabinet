@@ -236,6 +236,8 @@ function getCurrentPostID() {
 function initExcerptShowMore() {
     const showMoreBtn = document.querySelector(".tag\\.excerpt-more")
     const excerpt = document.querySelector(".tag\\.book-excerpt")
+    if (!excerpt)
+        return
     const height = excerpt.clientHeight
     const maxHeight = parseInt(window.getComputedStyle(excerpt).maxHeight)
     if (!maxHeight || height < maxHeight) //没有最大高度，或未超过最大高度
@@ -310,8 +312,10 @@ import 'swiper/css';
 import 'swiper/css/effect-coverflow'
 import 'swiper/css/pagination'
 import 'swiper/css/navigation'
+import { initUserDashboard } from "./user/user-dashboard.mjs";
+import { initUserUtilities } from "./user/user-utility.mjs";
 function initCarousel() {
-    const swiper = new Swiper('.swiper', {
+    const swiper = new Swiper('.tag\\.banner-carousel.swiper', {
         modules: [EffectCoverflow, Navigation, Pagination, Autoplay, Parallax],
         init: true,
         // Optional parameters
@@ -389,16 +393,9 @@ export function siteInitialize() {
     // book finder
     initBookFinder()
 
-    // setTimeout(() => {
-    //     showAlert("success", "title", "message", 3000)
-    // }, 2000);
-    // setTimeout(() => {
-    //     showAlert("error", "title", "message", 1500)
-    // }, 2500);
-    // setTimeout(() => {
-    //     showAlert("warning", "title", "message", 2000)
-    // }, 3000);
-    // setTimeout(() => {
-    //     showAlert("normal", "title", "message", 5000)
-    // }, 3500);
+    // user dashboard
+    initUserDashboard()
+
+    //user 
+    initUserUtilities()
 }

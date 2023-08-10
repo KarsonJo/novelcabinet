@@ -9,3 +9,7 @@ require_once('Modules/book-setup.php');
 foreach (glob(__DIR__ . '/Theme/*.php') as $file) {
     require_once($file);
 }
+
+foreach (glob(__DIR__ . '/Modules/User/*.php') as $file) {
+    require_once($file);
+}

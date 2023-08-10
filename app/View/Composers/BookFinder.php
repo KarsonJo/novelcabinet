@@ -81,38 +81,39 @@ class BookFinder extends Composer
         // DB::connection('mysql2');
 
         $maxPage = ($builder->count() - 1) / $limit + 1;
-        echo $maxPage;
-        echo '<br/>';
-        echo $page;
-        echo '<br/>';
-        print_r($this->getPagination($page, $maxPage));
-        echo '<br/>';
+        // echo $maxPage;
+        // echo '<br/>';
+        // echo $page;
+        // echo '<br/>';
+        // print_r($this->getPagination($page, $maxPage));
+        // echo '<br/>';
 
         global $wp;
         // global $post;
-        echo $wp->request;
-        echo '<br/>';
-        echo home_url($wp->request);
-        echo '<br/>';
-        print_r($wp->query_vars);
-        echo '<br/>';
-        print_r(get_post_type());
-        echo '<br/>';
-        print_r(get_post_types());
-        echo '<br/>';
-        print_r($wp->query_vars);
-        echo '<br/>';
-        echo add_query_arg($wp->query_vars, home_url());
-        echo '<br/>';
-        $query_args = $wp->query_vars;
-        $page = array_key_exists('page', $query_args) ? $query_args['page'] : 1;
-        $query_args['page'] = $page + 1;
-        print_r($query_args);
-        echo '<br/>';
-        echo add_query_arg($wp->query_vars, user_trailingslashit(home_url($wp->request), 'post'));
-        echo '<br/>';
-        echo get_permalink();
-        echo '<br/>';
+        // echo $wp->request;
+        // echo '<br/>';
+        // echo home_url($wp->request);
+        // echo '<br/>';
+        // print_r($wp->query_vars);
+        // echo '<br/>';
+        // print_r(get_post_type());
+        // echo '<br/>';
+        // print_r(get_post_types());
+        // echo '<br/>';
+        // print_r($wp->query_vars);
+        // echo '<br/>';
+        // echo add_query_arg($wp->query_vars, home_url());
+        // echo '<br/>';
+        // $query_args = $wp->query_vars;
+        // print_r($query_args);
+        // $page = array_key_exists('page', $query_args) ? $query_args['page'] : 1;
+        // $query_args['page'] = $page + 1;
+        // print_r($query_args);
+        // echo '<br/>';
+        // echo add_query_arg($wp->query_vars, user_trailingslashit(home_url($wp->request), 'post'));
+        // echo '<br/>';
+        // echo get_permalink();
+        // echo '<br/>';
 
         function filterItem($value, $content, $queryKey = null)
         {

@@ -2,6 +2,8 @@
 
 namespace NovelCabinet\Utility;
 
+use DateTime;
+
 function js_asyncdefer_feature($tag, $handle)
 {
     // if the unique handle/name of the registered script has 'async' in it
@@ -50,4 +52,26 @@ function human_look_number(int $number): string
 
 
     return round($res_num, 1) . $res_unit;
+}
+
+
+/**
+ * home链接，并根据Permalink格式处理末尾斜杠
+ */
+function home_url_trailingslashit($path = ''): string
+{
+    return user_trailingslashit(home_url($path));
+}
+
+/**
+ * 判断日期字符串是否为有效
+ * 
+ * https://stackoverflow.com/questions/19271381/correctly-determine-if-date-string-is-a-valid-date-in-that-format
+ */
+function validate_date($date, $format = 'Y-m-d')
+{
+    if (!$date) return false;
+    $d = DateTime::createFromFormat($format, $date);
+    // The Y ( 4 digits year ) returns TRUE for any integer with any number of digits so changing the comparison from == to === fixes the issue.
+    return $d && $d->format($format) === $date;
 }

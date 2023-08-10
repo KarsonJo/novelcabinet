@@ -46,10 +46,18 @@ sm:min-h-[5rem]">
 
         {{-- user info  --}}
         <li class="max-sm:-order-1 flex items-center gap-5">
-            {{-- <div class="w-full h-full bg-slate-600 cursor-pointer p-4 mr-auto">
-                <a href=""></a>
-            </div> --}}
-            @include('partials.header.user-menu')
+            {{-- @include('partials.header.user-menu') --}}
+            {{-- hover menu --}}
+            <x-header.user-menu />
+
+            {{-- Mobile menu --}}
+            <div class="sm:hidden leading-8">
+                <div class="text-sm font-bold">{{ $user->display_name }}</div>
+                <a class="text-sm font-bold hover:text-theme-bg1 cursor-pointer" href="{{ $signUrl }}">
+                    {{ $sign }}
+                </a>
+            </div>
+
         </li>
         {{-- search button --}}
         <li class="flex items-center">

@@ -6,7 +6,7 @@
     max-sm:max-h-72 max-sm:aspect-video
     sm:max-w-[min(90%,48rem)] sm:py-[5vh]
     lg:max-w-[unset]">
-        <div class="swiper [&_.swiper-slide>*]:opacity-50 [&_.swiper-slide>*]:transition-opacity [&_.swiper-slide>*]:duration-500 
+        <div class="tag.banner-carousel swiper [&_.swiper-slide>*]:opacity-50 [&_.swiper-slide>*]:transition-opacity [&_.swiper-slide>*]:duration-500 
             [&_.swiper-slide-prev>*]:opacity-50 [&_.swiper-slide-next>*]:opacity-50 [&_.swiper-slide-active>*]:opacity-100">
             <!-- Additional required wrapper -->
             <div class="swiper-wrapper">
