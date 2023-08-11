@@ -17,7 +17,7 @@
                 @endphp
                 @foreach ($test as $item => $value)
                     {{-- Slide item --}}
-                    <div class="swiper-slide aspect-video group
+                    <div class="swiper-slide aspect-video group/book
                     sm:aspect-[1.85/1]
                     md:aspect-[2/1]
                     lg:w-[min(48rem,75%)]">

@@ -37,13 +37,19 @@
     global $wp;
     $endpoint = UserEndpoints::tryFrom(Router::$data['endpoint']) ?? UserEndpoints::Settings;
     $menu = [
-        UserEndpoints::Settings->value => __('edit-profile'),
-        UserEndpoints::Books->value => __('all-books'),
+        UserEndpoints::Settings->value => [
+            'displayName' => __('edit-profile'),
+            'iconClass' => 'fa-user',
+        ],
+        UserEndpoints::Books->value => [
+            'displayName' => __('all-books'),
+            'iconClass' => 'fa-books',
+        ],
     ];
 @endphp
 <div class="tag.user-dashboard-menu">
-    <div class="tag.user-dashboard h-screen flex group">
-        <div class="tag.col-left transition-all   max-sm:w-0 max-xl:w-20 xl:w-80 group-[.opened]:w-[min(80%,20rem)] xl:group-[.opened]:w-20 relative">
+    <div class="tag.user-dashboard h-screen flex group/dashboard">
+        <div class="tag.col-left transition-all   max-sm:w-0 max-xl:w-20 xl:w-80 group-[.opened]/dashboard:w-[min(80%,20rem)] xl:group-[.opened]/dashboard:w-20 relative">
             {{-- navigation bar --}}
             <nav class="tag.nav h-screen bg-theme-bg1 flex flex-col">
                 <div class="py-6 whitespace-nowrap flex items-center">
@@ -52,14 +58,14 @@
                 </div>
                 <div dir="rtl" class="ml-1 scrollbar-thin scrollbar-thumb-transparent [&:hover]:scrollbar-thumb-theme-fg1 overflow-y-scroll scrollbar-thumb-rounded-full gutter-stable">
                     <ul dir="ltr" class="pl-1 my-8 whitespace-nowrap">
-                        @foreach ($menu as $segment => $displayName)
+                        @foreach ($menu as $segment => $item)
                             <li class="tag.nav-item inverse-rounded-right rounded-l-full bg-primary-bg bg-opacity-0 transition-colors relative {{ $segment === $endpoint->value ? 'selected' : '' }}
                                 before:opacity-0 before:bg-primary-bg after:opacity-0 after:bg-primary-bg 
                                 hover:bg-opacity-90 hover:before:opacity-90 hover:after:opacity-90 hover:text-theme-bg1
                                 selected:bg-opacity-100 selected:before:opacity-100 selected:after:opacity-100 selected:text-theme-bg1">
                                 <a class="py-4 flex items-center" href="{{ get_user_home_url("/$segment") }}">
-                                    <span class="font-semibold text-2xl px-3"><i class="fa-light fa-user"></i></span>
-                                    <span class="px-5">{{ $displayName }}</span>
+                                    <span class="font-semibold text-2xl px-3"><i class="fa-light {{ $item['iconClass'] }}"></i></span>
+                                    <span class="px-5">{{ $item['displayName'] }}</span>
                                 </a>
                             </li>
                         @endforeach
@@ -86,7 +92,7 @@
                     </div>
                 </div>
                 {{-- main content --}}
-                <div class="grow overflow-y-auto gutter-stable">
+                <div class="grow overflow-y-auto">
                     @switch($endpoint)
                         @case(UserEndpoints::Settings)
                             @include('sections.user.profile-settings')
@@ -95,6 +101,7 @@
                         @case(UserEndpoints::Books)
                             @include('sections.user.user-booklist')
                         @break
+
                         @default
                     @endswitch
 

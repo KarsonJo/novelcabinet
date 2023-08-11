@@ -138,6 +138,7 @@ namespace KarsonJo\BookPost {
 
 namespace KarsonJo\BookPost\SqlQuery {
 
+    use App\View\Composers\BookFinder;
     use Exception;
     use KarsonJo\BookPost\Book;
     use KarsonJo\BookPost\PostCache\CacheBuilder;
@@ -568,9 +569,19 @@ namespace KarsonJo\BookPost\SqlQuery {
             return $this;
         }
 
-        public function of_id(int $id): BookFilterBuilder
+        public function of_id(int|WP_Post $id): BookFilterBuilder
         {
+            if ($id instanceof WP_Post)
+                $id = $id->ID;
             $this->where(['posts.ID' => $id]);
+            return $this;
+        }
+
+        public function of_author(int|WP_User $author): BookFilterBuilder
+        {
+            if ($author instanceof WP_User)
+                $author = $author->ID;
+            $this->where(['posts.post_author' => $author]);
             return $this;
         }
 

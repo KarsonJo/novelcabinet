@@ -64,11 +64,7 @@ Router::registerRoute(
 );
 Router::init();
 
-
-echo '<a href="//google.com">123</a>';
-
-
-
+// ======================== redirect =============================
 
 // 验证修改邮箱，然后重定向
 // add_action('profile_update', fn () => is_admin() && !empty($_GET['dismiss']) && wp_redirect(get_user_home_url()) and exit);
@@ -95,6 +91,100 @@ add_filter('wp_redirect', function ($location) {
 
     return $location;
 });
+
+
+
+
+
+
+
+
+
+
+// add_filter('posts_request', function ($request, $query) {
+//     if (is_admin() || !$query->is_main_query()) {
+//         return $request;
+//     }
+//     print_r($request);
+//     print_r($query);
+//     return $request;
+
+//     if (is_single()) { // 仅当访问单个文章页面时执行
+//         $post_id = get_queried_object_id(); // 获取当前文章的ID
+//         global $post;
+//         print_r($post);
+//         $parent_post_id = wp_get_post_parent_id($post_id);
+
+//         if ($parent_post_id) {
+//             $parent_post_status = get_post_status($parent_post_id);
+
+//             if ($parent_post_status !== 'publish') {
+//                 global $wp_query;
+//                 $wp_query->set_404();
+//                 status_header(404);
+//                 get_template_part(404);
+//                 exit();
+//             }
+//         }
+//     }
+// }, 10, 2);
+
+// 子书籍返回404如果父书籍被设置为私有或草稿
+add_filter('pre_handle_404', function ($_, $wp_query) {
+    global $wp_the_query;
+    if (empty($wp_query->post))
+        return false;
+    $ancestor_id = last(get_post_ancestors($wp_query->post->ID));
+    // 是子文章，且无权访问爷/爹
+    if ($ancestor_id && !current_user_can('read_post', $ancestor_id)) {
+        //清空文章
+        $wp_query->posts = [];
+        unset($wp_query->post);
+        $wp_query->post_count = 0;
+
+        // print_r($wp_the_query->post);
+        // wp_reset_query();
+        // print_r($wp_the_query->post);
+        // print_r("user cant read this");
+        //设置404
+        $wp_query->set_404();
+        status_header(404);
+        nocache_headers();
+    }
+    return false;
+}, 10, 2);
+
+
+// add_action('pre_get_posts', function ($query) {
+//     if (is_admin() || !$query->is_main_query()) {
+//         return;
+//     }
+//     global $wp;
+//     print_r($wp->query_vars);
+//     return;
+
+//     if (is_single()) { // 仅当访问单个文章页面时执行
+//         $post_id = get_queried_object_id(); // 获取当前文章的ID
+//         // global $post;
+//         print_r($query);
+//         $parent_post_id = wp_get_post_parent_id($post_id);
+
+//         if ($parent_post_id) {
+//             $parent_post_status = get_post_status($parent_post_id);
+
+//             if ($parent_post_status !== 'publish') {
+//                 global $wp_query;
+//                 $wp_query->set_404();
+//                 status_header(404);
+//                 get_template_part(404);
+//                 exit();
+//             }
+//         }
+//     }
+// });
+
+
+// =========================== helper ============================
 
 /**
  * 返回用户的home链接，根据Permalink规则决定是否补斜杠

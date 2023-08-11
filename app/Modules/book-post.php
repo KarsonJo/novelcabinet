@@ -159,7 +159,7 @@ class Book
     {
         if ($id instanceof WP_Post)
             $id = $id->ID;
-        $book = BookFilterBuilder::create()->of_id($id)->get_as_book();
+        $book = BookFilterBuilder::create(null, false)->of_id($id)->get_as_book();
         if (!$book)
             return null;
 
