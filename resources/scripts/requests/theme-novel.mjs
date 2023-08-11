@@ -4,6 +4,8 @@ const domain = "knc"
 const version = "v1"
 const namespace = `/wp-json/${domain}/${version}`
 
+// ========== REST API ==========
+
 /**
  * @param {string} username 
  * @param {string} password 
@@ -40,4 +42,24 @@ export async function updateUserdata(userdata) {
         body: JSON.stringify(userdata),
         headers: headers
     })
+}
+
+// ========== Redirect method ==========
+/**
+ * 按照主题设置为链接添加末尾斜杠
+ * 一般用于js生成的url
+ * @param {string} value
+ */
+function userTrailingSlashIt(value) {
+    return themeConfig ? value.trimEnd() + themeConfig.trailingSlash : value;
+}
+
+/**
+ * 跳转到外链访问警告的页面
+ * @param {string} target 
+ */
+export function toExternalWarn(target) {
+    const url = new URL(userTrailingSlashIt("/external-redirect"), location.origin)
+    url.searchParams.set('target', target)
+    window.location.href = url.href
 }

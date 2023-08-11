@@ -1,6 +1,19 @@
 <?php
 
 namespace KarsonJo\BookPost\RESTAPI {
+    /**
+     * 加入用于api的JavaScript数据
+     */
+    add_action('wp_enqueue_scripts', function () {
+        wp_enqueue_script('wp-api');
+        wp_localize_script('wp-api', 'wpApiSettings', [
+            'root' => esc_url_raw(rest_url()),
+            'nonce' => wp_create_nonce('wp_rest')
+        ]);
+    });
+}
+
+namespace KarsonJo\BookPost\RESTAPI {
 
     use Exception;
     use WP_REST_Response;
@@ -92,18 +105,6 @@ namespace KarsonJo\BookPost\RESTAPI {
         ));
     }
     add_action('rest_api_init', 'KarsonJo\BookPost\RESTAPI\register_rest_routes');
-
-
-
-    function set_api_javascript_data()
-    {
-        wp_enqueue_script('wp-api');
-        wp_localize_script('wp-api', 'wpApiSettings', array(
-            'root' => esc_url_raw(rest_url()),
-            'nonce' => wp_create_nonce('wp_rest')
-        ));
-    }
-    add_action('wp_enqueue_scripts', 'KarsonJo\BookPost\RESTAPI\set_api_javascript_data');
 }
 
 namespace NovelCabinet\RESTAPI {

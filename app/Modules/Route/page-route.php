@@ -8,15 +8,21 @@ namespace KarsonJo\BookRequest;
  */
 
 /**
- * ========== 自定义页面路由 ==========
- * 
- *
- * 做法1，使用重写规则+查询字符串标记（未使用）
- * https://stackoverflow.com/questions/25310665/wordpress-how-to-create-a-rewrite-rule-for-a-file-in-a-custom-plugin
- * 缺点是会污染查询字符串
- * 
- * 做法2，使用重写规则+正则匹配+变量标记
+ * 形如：my.site/user/(xxxx)/
+ * 键随意，值才是slug
  */
+enum UserEndpoints: string
+{
+    case Settings = 'settings';
+    case Main = 'main';
+    case Writing = 'writing';
+    case Books = 'books';
+
+    public static function sigments(): array
+    {
+        return array_column(UserEndpoints::cases(), 'value');
+    }
+}
 
 // $template = get_template_directory() . '/resources/views/book-finder.blade.php';
 // more robust: https://discourse.roots.io/t/load-a-specific-blade-template-for-custom-url-structure-with-wp-rewrite/22951
@@ -25,17 +31,30 @@ Router::registerRoute(
     '^bookfinder/?$',
     locate_template(app('sage.finder')->locate('book-finder'))
 );
-// https://my.site/user/
+
+// https://my.site/user/(xxxx)/
 Router::registerRoute(
-    '^user/?$',
+    [
+        '^user/?$',
+        '^user/(?P<endpoint>' . implode('|', UserEndpoints::sigments()) . ')?/?$'
+    ],
     locate_template(app('sage.finder')->locate('user')),
-    fn () => !is_user_logged_in() && wp_redirect(get_user_login_url()) and exit
+    [
+        fn () => !is_user_logged_in() && wp_redirect(get_user_login_url(), 301),
+        fn () => Router::atPath('^user/?$') && wp_redirect(get_user_home_url(UserEndpoints::Settings), 301),
+    ]
 );
 // https://my.site/login/
 Router::registerRoute(
     '^login/?$',
     locate_template(app('sage.finder')->locate('login')),
-    fn () => is_user_logged_in() && wp_redirect(get_user_home_url()) and exit
+    fn () => is_user_logged_in() && wp_redirect(get_user_home_url(), 301)
+);
+// https://my.site/external-redirect
+Router::registerRoute(
+    '^external-redirect/?$',
+    locate_template(app('sage.finder')->locate('external-redirect')),
+    // fn () => is_user_logged_in() && wp_redirect(get_user_home_url()) and exit
 );
 // https://my.site/date/1970/01/01
 Router::registerRoute(
@@ -45,11 +64,17 @@ Router::registerRoute(
 );
 Router::init();
 
+
+echo '<a href="//google.com">123</a>';
+
+
+
+
 // 验证修改邮箱，然后重定向
 // add_action('profile_update', fn () => is_admin() && !empty($_GET['dismiss']) && wp_redirect(get_user_home_url()) and exit);
 add_filter('wp_redirect', function ($location) {
     //没有相关数据，绝对不是修改邮箱链接，直接返回
-    if (!(isset( $_GET['newuseremail'] ) || isset( $_GET['dismiss'] )) || !get_current_user_id())
+    if (!(isset($_GET['newuseremail']) || isset($_GET['dismiss'])) || !get_current_user_id())
         return $location;
 
     // 解析URL
@@ -73,10 +98,13 @@ add_filter('wp_redirect', function ($location) {
 
 /**
  * 返回用户的home链接，根据Permalink规则决定是否补斜杠
+ * @param string|UserEndpoints $subpath 紧随其后的路径
  */
-function get_user_home_url()
+function get_user_home_url(string|UserEndpoints $subpath = UserEndpoints::Settings)
 {
-    return user_trailingslashit(home_url('/user'));
+    if ($subpath instanceof UserEndpoints)
+        $subpath = "/$subpath->value";
+    return user_trailingslashit(home_url("/user$subpath"));
 }
 
 /**
@@ -105,77 +133,35 @@ class Router
 
     /**
      * 注册一个路由路径
-     * @param string $routePath 路径，正则表达式，站点名后的路径部分
+     * @param string|string[] $routePaths 一个或多个路径，正则表达式，站点名后的路径部分
      * @param string $template 加载的blade or php文件
-     * @param callable $redirect 可选的重定向逻辑，在该路由生效时在template_redirect触发
+     * @param ?callable|callable[] $redirects 可选的重定向逻辑，在该路由生效时在template_redirect触发，传入的重定向函数只需返回布尔值，不必退出
      */
-    public static function registerRoute(string $routePath, string $template, ?callable $redirect = null)
+    public static function registerRoute(string|iterable $routePaths, string $template, null|callable|iterable $redirects = null)
     {
-        if (!$routePath)
+        if (!$routePaths)
             return;
 
+        if (is_string($routePaths))
+            $routePaths = [$routePaths];
         /**
          * 记录到重写规则
          */
-        add_action('init', fn () => add_rewrite_rule($routePath, 'index.php', 'top'));
+        foreach ($routePaths as $routePath)
+            add_action('init', fn () => add_rewrite_rule($routePath, 'index.php', 'top'));
         /**
          * 匹配url并设置标记变量，使用最早能够获得url的钩子：
          * https://wordpress.stackexchange.com/questions/317760/how-do-i-know-if-a-rewritten-rule-was-applied
          */
-        add_action('parse_request', function ($wp) use ($routePath, $template, $redirect) {
-            if (preg_match("<$routePath>", $wp->request, $matches)) {
-                // Router::setActivePath($routePath);
-                Router::setActiveRoute($routePath, $template, $redirect);
-                Router::$data = Router::filterMatches($matches);
-            }
+        add_action('parse_request', function ($wp) use ($routePaths, $template, $redirects) {
+            foreach ($routePaths as $routePath)
+                if (preg_match("<$routePath>", $wp->request, $matches)) {
+                    // Router::setActivePath($routePath);
+                    Router::setActiveRoute($routePath, $template, $redirects);
+                    Router::$data = Router::filterMatches($matches);
+                    break;
+                }
         });
-
-        // /**
-        //  * 检测标记并选择性进行页面加载
-        //  */
-        // add_filter('template_include', fn ($tpl) => (print_r(" template_include ") || true) && Router::atPath($routePath) ? $template : $tpl);
-        // // add_filter('template_include', function ($tpl) use ($routePath, $template) {
-        // //     if (!Router::atPath($routePath))
-        // //         return $tpl;
-        // //     global $wp_query;
-        // //     // $wp_query->is_404 = false;
-        // //     Router::_debugPrintTags($wp_query);
-
-        // //     return $template;
-        // // });
-
-        // /**
-        //  * 加入重定向逻辑
-        //  */
-        // if ($redirect)
-        //     add_action('template_redirect', fn () => Router::atPath($routePath) && (print_r(" template_redirect ") || true) && $redirect());
-
-        // /**
-        //  * 抑制主查询
-        //  */
-        // add_filter('posts_request', fn ($request, $query) => Router::atPath($routePath) && $query->is_main_query() ? false : $request, 10, 2);
-        // // add_filter('posts_request', function ($request, $query) use ($routePath) {
-        // //     // global $wp_query
-        // //     if (Router::atPath($routePath) && $query->is_main_query()) {
-
-        // //         // $query->init_query_flags();
-        // //         return false;
-        // //     }
-        // //     return $request;
-        // // }, 10, 2);
-
-        // /**
-        //  * 两件事：
-        //  * 1. 将$wp_query->is_home设置为false，以免redirect_canonical中被标志为home页面强行加末尾斜杠
-        //  * 2. 抑制由于“抑制主查询”产生的404
-        //  */
-        // add_filter('pre_handle_404', function ($suppress, $wp_query) use ($routePath) {
-        //     if (!Router::atPath($routePath))
-        //         return $suppress;
-        //     // Router::_debugPrintTags($wp_query);
-        //     $wp_query->init_query_flags();
-        //     return true;
-        // }, 10, 2);
     }
 
     public static function init()
@@ -184,7 +170,7 @@ class Router
         add_action('after_switch_theme', 'flush_rewrite_rules');
     }
 
-    protected static function setActiveRoute(string $routePath, string $template, ?callable $redirect = null)
+    protected static function setActiveRoute(string $routePath, string $template, null|callable|iterable $redirects = null)
     {
         Router::$activePath = $routePath;
 
@@ -195,9 +181,14 @@ class Router
 
         /**
          * 加入重定向逻辑
+         * 优先级设为9抢先在redirect_canonical之前执行，否则可能触发无意义的canonical redirect
          */
-        if ($redirect)
-            add_action('template_redirect', fn () => $redirect());
+        if (is_string($redirects))
+            $redirects = [$redirects];
+
+        if ($redirects)
+            foreach ($redirects as $redirect)
+                add_action('template_redirect', fn () => $redirect() and exit(), 9, 0);
 
         /**
          * 抑制主查询

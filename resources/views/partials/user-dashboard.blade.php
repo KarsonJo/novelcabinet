@@ -29,7 +29,18 @@
     </div>
 </div> --}}
 
-
+@php
+    
+    use KarsonJo\BookRequest\UserEndpoints;
+    use KarsonJo\BookRequest\Router;
+    use function KarsonJo\BookRequest\get_user_home_url;
+    global $wp;
+    $endpoint = UserEndpoints::tryFrom(Router::$data['endpoint']) ?? UserEndpoints::Settings;
+    $menu = [
+        UserEndpoints::Settings->value => __('edit-profile'),
+        UserEndpoints::Books->value => __('all-books'),
+    ];
+@endphp
 <div class="tag.user-dashboard-menu">
     <div class="tag.user-dashboard h-screen flex group">
         <div class="tag.col-left transition-all   max-sm:w-0 max-xl:w-20 xl:w-80 group-[.opened]:w-[min(80%,20rem)] xl:group-[.opened]:w-20 relative">
@@ -41,12 +52,14 @@
                 </div>
                 <div dir="rtl" class="ml-1 scrollbar-thin scrollbar-thumb-transparent [&:hover]:scrollbar-thumb-theme-fg1 overflow-y-scroll scrollbar-thumb-rounded-full gutter-stable">
                     <ul dir="ltr" class="pl-1 my-8 whitespace-nowrap">
-                        @foreach ([1, 2, 3, 4, 5, 6, 7] as $item)
-                            <li class="tag.nav-item inverse-rounded-right hover:bg-primary-bg rounded-l-full transition-colors relative 
-                                before:opacity-0 hover:before:opacity-100 before:bg-primary-bg after:opacity-0 hover:after:opacity-100 after:bg-primary-bg hover:text-theme-bg1">
-                                <a class="py-4 flex items-center" href="">
+                        @foreach ($menu as $segment => $displayName)
+                            <li class="tag.nav-item inverse-rounded-right rounded-l-full bg-primary-bg bg-opacity-0 transition-colors relative {{ $segment === $endpoint->value ? 'selected' : '' }}
+                                before:opacity-0 before:bg-primary-bg after:opacity-0 after:bg-primary-bg 
+                                hover:bg-opacity-90 hover:before:opacity-90 hover:after:opacity-90 hover:text-theme-bg1
+                                selected:bg-opacity-100 selected:before:opacity-100 selected:after:opacity-100 selected:text-theme-bg1">
+                                <a class="py-4 flex items-center" href="{{ get_user_home_url("/$segment") }}">
                                     <span class="font-semibold text-2xl px-3"><i class="fa-light fa-user"></i></span>
-                                    <span class="px-5">菜单项{{ $item }}</span>
+                                    <span class="px-5">{{ $displayName }}</span>
                                 </a>
                             </li>
                         @endforeach
@@ -69,12 +82,22 @@
                     </div>
                     <div class="ml-auto mr-8 h-12">
                         {{-- @include('partials.header.user-menu') --}}
-                        <x-header.user-menu></x-header.user-menu>
+                        <x-header.user-menu />
                     </div>
                 </div>
                 {{-- main content --}}
                 <div class="grow overflow-y-auto gutter-stable">
-                    @include('sections.profile-settings')
+                    @switch($endpoint)
+                        @case(UserEndpoints::Settings)
+                            @include('sections.user.profile-settings')
+                        @break
+
+                        @case(UserEndpoints::Books)
+                            @include('sections.user.user-booklist')
+                        @break
+                        @default
+                    @endswitch
+
                 </div>
             </div>
         </div>

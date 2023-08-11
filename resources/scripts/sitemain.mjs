@@ -1,9 +1,37 @@
 
+import Swiper, { EffectCoverflow, Navigation, Pagination, Autoplay, Parallax } from "swiper";
+
+import 'swiper/css';
+import 'swiper/css/effect-coverflow'
+import 'swiper/css/pagination'
+import 'swiper/css/navigation'
+
+import { initUserDashboard } from "./user/user-dashboard.mjs";
+import { initUserUtilities } from "./user/user-utility.mjs";
 import { initReaderSettings } from "./reader-settings.mjs";
 import { initBookFinder } from "./book-finder.mjs";
 import { showAlert } from "./alert.mjs"
 import { ResponseError } from "./errors.mjs"
+
 import * as bookPost from "@scripts/requests/book-post.mjs"
+import * as theme from "@scripts/requests/theme-novel.mjs"
+
+
+// =========External Link Warning=========
+function initExternalLinkWarning() {
+    document.addEventListener("click", (event) => {
+        if (event.target.tagName.toLowerCase() === 'a') {
+            const url = event.target.href
+
+            console.log(url)
+            if (url && new URL(url).origin !== location.origin) {
+                event.preventDefault()
+                theme.toExternalWarn(url)
+            }
+        }
+    })
+
+}
 // =========BookIntro=========
 function initRating() {
     const ratingStars = document.querySelector(".tag\\.rating")
@@ -306,14 +334,7 @@ function setDefaultValues() {
 }
 
 // =========Carousel=========
-import Swiper, { EffectCoverflow, Navigation, Pagination, Autoplay, Parallax } from "swiper";
 
-import 'swiper/css';
-import 'swiper/css/effect-coverflow'
-import 'swiper/css/pagination'
-import 'swiper/css/navigation'
-import { initUserDashboard } from "./user/user-dashboard.mjs";
-import { initUserUtilities } from "./user/user-utility.mjs";
 function initCarousel() {
     const swiper = new Swiper('.tag\\.banner-carousel.swiper', {
         modules: [EffectCoverflow, Navigation, Pagination, Autoplay, Parallax],
@@ -378,6 +399,7 @@ export function siteInitialize() {
     // all
     initListeners()
     setDefaultValues()
+    initExternalLinkWarning()
     // index
     initCarousel()
 

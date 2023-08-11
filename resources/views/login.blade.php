@@ -1,8 +1,6 @@
 @extends('layouts.main')
 @section('mainpage')
-    <div class="w-full h-full">
-        <div class="">
+    <div class="w-full h-full pt-40">
             @includeFirst(['forms.user-login'])
-        </div>
     </div>
 @endsection
