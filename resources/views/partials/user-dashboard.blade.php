@@ -31,9 +31,9 @@
 
 @php
     
-    use KarsonJo\BookRequest\UserEndpoints;
-    use KarsonJo\BookRequest\Router;
-    use function KarsonJo\BookRequest\get_user_home_url;
+    use NovelCabinet\Services\Route\Enums\UserEndpoints;
+    use KarsonJo\Utilities\Route\Router;
+    use NovelCabinet\Helpers\WebHelpers;
     global $wp;
     $endpoint = UserEndpoints::tryFrom(Router::$data['endpoint']) ?? UserEndpoints::Settings;
     $menu = [
@@ -57,7 +57,7 @@
                                 before:opacity-0 before:bg-primary-bg after:opacity-0 after:bg-primary-bg 
                                 hover:bg-opacity-90 hover:before:opacity-90 hover:after:opacity-90 hover:text-theme-bg1
                                 selected:bg-opacity-100 selected:before:opacity-100 selected:after:opacity-100 selected:text-theme-bg1">
-                                <a class="py-4 flex items-center" href="{{ get_user_home_url("/$segment") }}">
+                                <a class="py-4 flex items-center" href="{{ WebHelpers::getUserHomeUrl("/$segment") }}">
                                     <span class="font-semibold text-2xl px-3"><i class="fa-light fa-user"></i></span>
                                     <span class="px-5">{{ $displayName }}</span>
                                 </a>

@@ -2,10 +2,10 @@
 
 namespace App\View\Composers\Header;
 
+use NovelCabinet\Helpers\WebHelpers;
 use Roots\Acorn\View\Composer;
 use Symfony\Component\HttpFoundation\Session\Flash\FlashBagInterface;
 
-use function KarsonJo\BookRequest\get_user_login_url;
 use function NovelCabinet\Utility\home_url_trailingslashit;
 
 class UserMenu extends Composer
@@ -46,7 +46,7 @@ class UserMenu extends Composer
             //visitor
             $avatar = get_avatar_url(0);
 
-            $profile_url = get_user_login_url();
+            $profile_url = WebHelpers::getUserLoginUrl();
             // $profile_url = wp_login_url();
             $items[] = [$profile_url, __('sign-in', 'NovelCabinet'), false];
         }

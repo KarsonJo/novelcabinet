@@ -2,9 +2,9 @@
 
 namespace App\View\Composers\Header;
 
+use NovelCabinet\Helpers\WebHelpers;
 use Roots\Acorn\View\Composer;
 
-use function KarsonJo\BookRequest\get_user_login_url;
 use function NovelCabinet\Utility\home_url_trailingslashit;
 
 class Header extends Composer
@@ -31,7 +31,7 @@ class Header extends Composer
             $sign = __('sign-out', 'NovelCabinet');
         }
         else {
-            $signUrl = get_user_login_url();
+            $signUrl = WebHelpers::getUserLoginUrl();
             $sign = __('sign-in', 'NovelCabinet');
         }
         return [

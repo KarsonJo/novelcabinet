@@ -3,9 +3,8 @@
 namespace App\View\Components\Header;
 
 use Illuminate\View\Component;
+use NovelCabinet\Helpers\WebHelpers;
 
-use function KarsonJo\BookRequest\get_user_home_url;
-use function KarsonJo\BookRequest\get_user_login_url;
 use function NovelCabinet\Utility\home_url_trailingslashit;
 
 class UserMenu extends Component
@@ -30,7 +29,7 @@ class UserMenu extends Component
         if ($this->logged) {
             $this->avatar = get_avatar_url($user->ID);
             // $this->profileUrl = site_url('/wp-admin/profile.php');
-            $this->profileUrl = get_user_home_url();
+            $this->profileUrl = WebHelpers::getUserHomeUrl();
 
             //admin
             if (current_user_can('level_10')) {
@@ -45,7 +44,7 @@ class UserMenu extends Component
             //visitor
             $this->avatar = get_avatar_url(0);
 
-            $this->profileUrl = get_user_login_url();
+            $this->profileUrl = WebHelpers::getUserLoginUrl();
             // $profileUrl = wp_login_url();
             $items[] = [$this->profileUrl, __('sign-in', 'NovelCabinet'), false]; //sign in
         }
