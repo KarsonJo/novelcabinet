@@ -5,7 +5,6 @@ use NovelCabinet\Services\Route\APIRoute;
 use NovelCabinet\Services\Route\ThemePageRoute;
 
 require_once('debug.php');
-require_once('Services/book-setup.php');
 // require_once('Theme/utility.php');
 // require_once('Theme/load-resources.php');
 
