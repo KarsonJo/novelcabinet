@@ -1,9 +1,8 @@
 <?php
 
-namespace KarsonJo\BookPost\PostCache {
+namespace KarsonJo\Utilities\PostCache {
 
-    define('KBP_CACHE_DOMAIN', 'kbp_post_cache');
-
+    use KarsonJo\BookPost\BookPost;
     use TenQuality\WP\Database\QueryBuilder;
 
     class CacheBuilder
@@ -134,31 +133,5 @@ namespace KarsonJo\BookPost\PostCache {
             if (isset($this->cached['taxonomy']))
                 update_object_term_cache($this->cached['taxonomy'], KBP_BOOK);
         }
-    }
-
-    /**
-     * 尝试获取一个wp_cache
-     * 若不存在，将从给定方法获取，并存入wp_cache
-     * @param int|string $key cache键
-     * @param string $group cache所属组
-     * @param callable $value_provider 失败时获取数值的函数
-     * @param int $expire 设置cache时，可指定的过期时间（秒）
-     * @return mixed|false
-     */
-    function get_or_set_cache(int|string $key, string $group = '', ?callable $value_provider = null, $expire = 0): mixed
-    {
-        $res = $value_provider();
-        return $res;
-
-
-        $res = wp_cache_get($key, $group);
-        if ($res) return $res;
-
-        if (!$value_provider) return false;
-
-        $res = $value_provider();
-        wp_cache_set($key, $res, $group, $expire);
-
-        return $res;
     }
 }
