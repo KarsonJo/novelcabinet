@@ -16,7 +16,7 @@ namespace KarsonJo\BookPost {
     {
         $args = [
             'child_of' => $id,
-            'post_type' => KBP_BOOK,
+            'post_type' => BookPost::KBP_BOOK,
             'sort_order' => 'ASC',
             'sort_column' => 'menu_order,post_title',
         ];
@@ -60,7 +60,7 @@ namespace KarsonJo\BookPost {
 
         $args = [
             'post_parent' => 0, // 获取所有没有父级的页面
-            'post_type' => KBP_BOOK, // 获取所有页面
+            'post_type' => BookPost::KBP_BOOK, // 获取所有页面
             // 'post_status' => 'publish', // 获取所有已发布的页面
         ];
 
@@ -74,7 +74,7 @@ namespace KarsonJo\BookPost {
     function get_all_genres()
     {
         return get_terms([
-            'taxonomy' => KBP_BOOK_GENRE,
+            'taxonomy' => BookPost::KBP_BOOK_GENRE,
             'hide_empty' => false,
         ]);
     }
@@ -91,7 +91,7 @@ namespace KarsonJo\BookPost {
             'numberposts' => is_numeric($param) ? $param : 9,
         );
 
-        $args['post_type'] = KBP_BOOK;
+        $args['post_type'] = BookPost::KBP_BOOK;
         $args['paged'] = $paged;
         $args['post_parent'] = 0;
 
@@ -121,7 +121,7 @@ namespace KarsonJo\BookPost {
      */
     function get_book_genres($id)
     {
-        return get_the_terms($id, KBP_BOOK_GENRE);
+        return get_the_terms($id, BookPost::KBP_BOOK_GENRE);
     }
 
     /**

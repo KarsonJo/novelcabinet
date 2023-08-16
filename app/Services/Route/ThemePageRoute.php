@@ -37,7 +37,7 @@ namespace NovelCabinet\Services\Route {
                 ],
                 locate_template(app('sage.finder')->locate('user')),
                 [
-                    fn () => !is_user_logged_in() && wp_redirect(WebHelpers::getUserHomeUrl(), 301),
+                    fn () => !is_user_logged_in() && wp_redirect(WebHelpers::getUserLoginUrl(), 301),
                     fn () => Router::atPath('^user/?$') && wp_redirect(WebHelpers::getUserHomeUrl(UserEndpoints::Settings), 301),
                 ]
             );

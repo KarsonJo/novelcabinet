@@ -89,7 +89,7 @@ namespace KarsonJo\BookPost {
             $book->cover = is_array($images) ? $images[0] : "";
 
 
-            $book->genres = get_the_terms($book->ID, $bookGenre ?? defined('KBP_BOOK_GENRE') ? KBP_BOOK_GENRE : "category");
+            $book->genres = get_the_terms($book->ID, $bookGenre ?? BookPost::KBP_BOOK_GENRE ?? "category");
 
             return $book;
         }

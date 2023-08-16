@@ -131,7 +131,7 @@ namespace KarsonJo\Utilities\PostCache {
 
 
             if (isset($this->cached['taxonomy']))
-                update_object_term_cache($this->cached['taxonomy'], KBP_BOOK);
+                update_object_term_cache($this->cached['taxonomy'], BookPost::KBP_BOOK);
         }
     }
 }

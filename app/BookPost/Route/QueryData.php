@@ -12,7 +12,7 @@ namespace KarsonJo\BookPost\Route {
         const KBP_QS_FILTER_LIMIT = 'limit';
         public static function init()
         {
-            add_filter('query_vars', function () {
+            add_filter('query_vars', function ($vars) {
                 $vars[] = static::KBP_QS_FILTER_GENRE;
                 $vars[] = static::KBP_QS_FILTER_LATEST;
                 $vars[] = static::KBP_QS_FILTER_RATING;

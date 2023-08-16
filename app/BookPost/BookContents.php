@@ -63,7 +63,7 @@ class BookContents implements \ArrayAccess, \Iterator, \Countable
         where       %d in (p1.post_parent, p2.post_parent) 
                     and p1.post_status = 'publish'
                     and p1.post_type = %s
-        order by    parent2_id, parent_id, p1.menu_order, p1.post_title;", $book, KBP_BOOK));
+        order by    parent2_id, parent_id, p1.menu_order, p1.post_title;", $book, BookPost::KBP_BOOK));
 
         if (!$results)
             return false;

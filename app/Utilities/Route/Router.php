@@ -68,7 +68,7 @@ namespace KarsonJo\Utilities\Route {
              * 加入重定向逻辑
              * 优先级设为9抢先在redirect_canonical之前执行，否则可能触发无意义的canonical redirect
              */
-            if (is_string($redirects))
+            if (is_callable($redirects))
                 $redirects = [$redirects];
 
             if ($redirects)
