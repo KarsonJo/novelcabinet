@@ -5,9 +5,8 @@ namespace App\View\Composers;
 use Roots\Acorn\View\Composer;
 use KarsonJo\BookPost;
 use KarsonJo\BookPost\Book;
+use KarsonJo\BookPost\SqlQuery\BookQuery;
 
-use function KarsonJo\BookPost\SqlQuery\get_book_user_rating;
-use function KarsonJo\BookPost\SqlQuery\get_user_favorite_lists;
 
 class BookIntro extends Composer
 {
@@ -46,8 +45,8 @@ class BookIntro extends Composer
             'readingLink' => $has_content ? get_permalink($first_chapter->ID) : '#',
             'book' => $this_book,
             'ratingValid' => $this_book->ratingWeight > 10,
-            'userRating' => get_book_user_rating($this_book->ID),
-            'favoriteLists' => get_user_favorite_lists(get_current_user_id(), null, $this_book->ID) ?: [(object)[]],
+            'userRating' => BookQuery::getBookUserRating($this_book->ID),
+            'favoriteLists' => BookQuery::getUserFavoriteLists(get_current_user_id(), null, $this_book->ID) ?: [(object)[]],
         ];
     }
 }

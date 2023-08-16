@@ -6,11 +6,8 @@ namespace KarsonJo\BookPost\Route {
     use WP_REST_Response;
 
     use KarsonJo\BookPost\SqlQuery as Query;
+    use KarsonJo\BookPost\SqlQuery\BookQuery;
     use Symfony\Component\Mime\Message;
-
-    use function KarsonJo\BookPost\SqlQuery\create_user_favorite_list;
-    use function KarsonJo\BookPost\SqlQuery\get_book_rating;
-    use function KarsonJo\BookPost\SqlQuery\set_book_rating;
 
     class APIRoute
     {
@@ -39,7 +36,7 @@ namespace KarsonJo\BookPost\Route {
                     // return new \WP_Error('invalid_user', '需要登录才能评分喔', array('status' => 401));
 
                     try {
-                        Query\set_book_rating($post_id, $user, $rating);
+                        BookQuery::setBookRating($post_id, $user, $rating);
                     } catch (Exception) {
                         return new WP_REST_Response(['message' => '已经评分过了'], 400);
                         // return new \WP_Error('rating_failed', '已经评分过了', array('status' => 400));
@@ -49,7 +46,7 @@ namespace KarsonJo\BookPost\Route {
                         'message' => '评分成功',
                         'id' => $post_id,
                         'userRating' => $rating,
-                        'avgRating' => Query\get_book_rating($post_id),
+                        'avgRating' => BookQuery::getBookRating($post_id),
                     ]);
                 }
             ));
@@ -68,7 +65,7 @@ namespace KarsonJo\BookPost\Route {
                         return new WP_REST_Response(['message' => '需要登录才能收藏喔'], 401);
 
                     try {
-                        $id = Query\create_user_favorite_list($user, $title, $visibility);
+                        $id = BookQuery::createUserFavoriteList($user, $title, $visibility);
                     } catch (Exception $e) {
                         return new WP_REST_Response(['title' => '创建收藏夹失败', 'message' => $e->getMessage()], 400);
                     }
@@ -99,7 +96,7 @@ namespace KarsonJo\BookPost\Route {
                         return new WP_REST_Response(['message' => '需要登录才能收藏喔'], 401);
 
                     try {
-                        Query\update_user_post_favorite($post_id, $user, $fav_lists);
+                        BookQuery::updateUserPostFavorite($post_id, $user, $fav_lists);
                     } catch (Exception $e) {
                         return new WP_REST_Response(['title' => '收藏失败', 'message' => $e->getMessage()], 400);
                     }

@@ -4,18 +4,9 @@ namespace App\View\Composers;
 
 use Roots\Acorn\View\Composer;
 
-
-use Latitude\QueryBuilder\Engine\CommonEngine;
-use Latitude\QueryBuilder\QueryFactory;
-
-
-use function Latitude\QueryBuilder\field;
-
-use KarsonJo\BookPost;
 use KarsonJo\BookPost\Route\QueryData;
 use KarsonJo\BookPost\SqlQuery\BookFilterBuilder;
 use KarsonJo\BookPost\SqlQuery\BookQuery;
-use TenQuality\WP\Database\QueryBuilder;
 
 class BookFinder extends Composer
 {
