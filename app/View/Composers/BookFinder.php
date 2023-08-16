@@ -13,8 +13,8 @@ use function KarsonJo\BookPost\SqlQuery\get_books_sql;
 use function Latitude\QueryBuilder\field;
 
 use KarsonJo\BookPost;
+use KarsonJo\BookPost\Route\QueryData;
 use KarsonJo\BookPost\SqlQuery\BookFilterBuilder;
-use KarsonJo\BookRequest\QueryData;
 use TenQuality\WP\Database\QueryBuilder;
 
 class BookFinder extends Composer
@@ -36,13 +36,13 @@ class BookFinder extends Composer
     public function override()
     {
 
-        $genre = QueryData\get_filter_genre();
-        $latest = QueryData\get_filter_latest();
-        $rating = QueryData\get_filter_rating_sorting();
-        $time = QueryData\get_filter_time_sorting();
-        $fav = QueryData\get_filter_in_favorite();
-        $page = max(QueryData\get_filter_page(), 1);
-        $limit = QueryData\get_filter_limit();
+        $genre = QueryData::filterGenre();
+        $latest = QueryData::filterLatest();
+        $rating = QueryData::filterRatingSorting();
+        $time = QueryData::filterTimeSorting();
+        $fav = QueryData::filterInFavorite();
+        $page = max(QueryData::filterPage(), 1);
+        $limit = QueryData::filterLimit();
         $limit = max(1, min(100, $limit ? $limit : 6));
 
         $builder = BookFilterBuilder::create();
@@ -137,7 +137,7 @@ class BookFinder extends Composer
                     'key' => 'genre',
                     // 'queryKey' => KBP_QS_FILTER_GENRE,
                     'items' => array_map(function ($term) {
-                        return filterItem($term->term_id, $term->name, KBP_QS_FILTER_GENRE);
+                        return filterItem($term->term_id, $term->name, QueryData::KBP_QS_FILTER_GENRE);
                     }, BookPost\get_all_genres())
                 ],
                 [
@@ -145,11 +145,11 @@ class BookFinder extends Composer
                     'key' => 'latest',
                     // 'queryKey' => KBP_QS_FILTER_LATEST,
                     'items' => [
-                        filterItem(1, '3日内', KBP_QS_FILTER_LATEST),
-                        filterItem(2, '7日内', KBP_QS_FILTER_LATEST),
-                        filterItem(3, '半月内', KBP_QS_FILTER_LATEST),
-                        filterItem(4, '一月内', KBP_QS_FILTER_LATEST),
-                        filterItem(5, '三月内', KBP_QS_FILTER_LATEST),
+                        filterItem(1, '3日内', QueryData::KBP_QS_FILTER_LATEST),
+                        filterItem(2, '7日内', QueryData::KBP_QS_FILTER_LATEST),
+                        filterItem(3, '半月内', QueryData::KBP_QS_FILTER_LATEST),
+                        filterItem(4, '一月内', QueryData::KBP_QS_FILTER_LATEST),
+                        filterItem(5, '三月内', QueryData::KBP_QS_FILTER_LATEST),
                     ]
                 ],
                 [
@@ -157,7 +157,7 @@ class BookFinder extends Composer
                     'key' => 'personal',
                     // 'queryKey' => KBP_QS_FILTER_LATEST,
                     'items' => [
-                        filterItem('1', '我的收藏', KBP_QS_FILTER_IN_FAVORITE),
+                        filterItem('1', '我的收藏', QueryData::KBP_QS_FILTER_IN_FAVORITE),
                     ]
                 ],
                 [
@@ -165,8 +165,8 @@ class BookFinder extends Composer
                     'key' => 'sorting',
                     // 'queryKey' => KBP_QS_FILTER_LATEST,
                     'items' => [
-                        filterItem('asc', '评分', KBP_QS_FILTER_RATING),
-                        filterItem('asc', '时间', KBP_QS_FILTER_TIME),
+                        filterItem('asc', '评分', QueryData::KBP_QS_FILTER_RATING),
+                        filterItem('asc', '时间', QueryData::KBP_QS_FILTER_TIME),
                     ]
                 ]
             ],

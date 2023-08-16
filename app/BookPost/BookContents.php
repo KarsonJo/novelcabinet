@@ -2,7 +2,7 @@
 
 namespace KarsonJo\BookPost;
 
-use KarsonJo\BookPost\PostCache\CacheBuilder;
+use KarsonJo\Utilities\PostCache\CacheBuilder;
 use WP_Post;
 
 /**

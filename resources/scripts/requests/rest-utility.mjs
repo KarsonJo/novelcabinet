@@ -1,4 +1,4 @@
-export let basicHeader = new Headers({
+export const basicHeader = () => new Headers({
     "Content-Type": "application/json",
     "Accept": "application/json",
     "X-WP-Nonce": wpApiSettings.nonce

@@ -1,6 +1,6 @@
 <?php
 
-namespace KarsonJo\BookPost {
+namespace KarsonJo\BookPost\SqlQuery {
 
     use Exception;
     use Throwable;
