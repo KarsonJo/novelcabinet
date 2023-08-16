@@ -17,6 +17,7 @@ foreach (glob(__DIR__ . '/Services/User/*.php') as $file) {
     require_once($file);
 }
 
+require_once('BookPost/bootloader.php');
 ThemePageRoute::init();
 APIRoute::init();
 RESTAPISupport::addJavascriptSupport();
