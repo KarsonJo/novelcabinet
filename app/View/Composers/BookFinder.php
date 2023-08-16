@@ -8,13 +8,13 @@ use Roots\Acorn\View\Composer;
 use Latitude\QueryBuilder\Engine\CommonEngine;
 use Latitude\QueryBuilder\QueryFactory;
 
-use function KarsonJo\BookPost\SqlQuery\get_book_of_genres_sql;
-use function KarsonJo\BookPost\SqlQuery\get_books_sql;
+
 use function Latitude\QueryBuilder\field;
 
 use KarsonJo\BookPost;
 use KarsonJo\BookPost\Route\QueryData;
 use KarsonJo\BookPost\SqlQuery\BookFilterBuilder;
+use KarsonJo\BookPost\SqlQuery\BookQuery;
 use TenQuality\WP\Database\QueryBuilder;
 
 class BookFinder extends Composer
@@ -61,7 +61,6 @@ class BookFinder extends Composer
         $builder->limit($limit);
 
         // $builder->select('mt.rating_avg');
-        // $builder = get_books_sql();
         // $builder->of_genres([3,4]);
 
         // $builder->of_latest(4);
@@ -70,7 +69,6 @@ class BookFinder extends Composer
 
         // $builder->in_favourite();
 
-        // get_book_of_genres_sql($builder,[3,4]);
         // print_r($query->toSql());
         // print_r($builder->get_as_book());
         // print_r($builder->debug_get_sql());
@@ -126,8 +124,6 @@ class BookFinder extends Composer
 
 
         return [
-            // 'genres' => BookPost\get_all_genres(),
-            // 'updateTimes' => [1 => '3日内', 2 =>  '7日内', 3 => '半月内', 4 => '一月内', 5 => '三月内'],
             'page' => $page,
             'books' => $builder->get_as_book(),
             'filters' =>
@@ -138,7 +134,7 @@ class BookFinder extends Composer
                     // 'queryKey' => KBP_QS_FILTER_GENRE,
                     'items' => array_map(function ($term) {
                         return filterItem($term->term_id, $term->name, QueryData::KBP_QS_FILTER_GENRE);
-                    }, BookPost\get_all_genres())
+                    }, BookQuery::allBookGenres())
                 ],
                 [
                     'title' => '最后更新',
@@ -205,38 +201,4 @@ class BookFinder extends Composer
             ];
         return $res;
     }
-
-    // private function getFilterBlock()
-    // {
-    //     function filterItem($value, $content)
-    //     {
-    //         return [
-    //             'value' => $value,
-    //             'content' => $content,
-    //         ];
-    //     }
-
-    //     return [
-    //         [
-    //             'title' => '类别',
-    //             'key' => 'genre',
-    //             'queryKey' => KBP_QS_FILTER_GENRE,
-    //             'items' => array_map(function ($genre) {
-    //                 return filterItem($genre->term_id, $genre->name);
-    //             }, BookPost\get_all_genres())
-    //         ],
-    //         [
-    //             'title' => '最后更新',
-    //             'key' => 'latest',
-    //             'queryKey' => KBP_QS_FILTER_LATEST,
-    //             'items' => [
-    //                 filterItem(1, '3日内'),
-    //                 filterItem(2, '7日内'),
-    //                 filterItem(3, '半月内'),
-    //                 filterItem(4, '一月内'),
-    //                 filterItem(5, '三月内'),
-    //             ]
-    //         ]
-    //     ];
-    // }
 }

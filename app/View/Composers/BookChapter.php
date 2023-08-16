@@ -4,6 +4,7 @@ namespace App\View\Composers;
 
 use Roots\Acorn\View\Composer;
 use KarsonJo\BookPost;
+use KarsonJo\BookPost\BookContents;
 
 class BookChapter extends Composer
 {
@@ -24,9 +25,9 @@ class BookChapter extends Composer
     public function override()
     {
         wp_enqueue_style('reader-themes', get_template_directory_uri() . '/resources/styles/reader-themes.css');
-        global $post;
-        $book = BookPost\get_book_from_post($post);
-        $contents = BookPost\get_book_contents($post);
+
+        $book = get_post();
+        $contents = new BookContents($book);
         $prev_chapter = $contents->previous_chapter();
         $next_chapter = $contents->next_chapter();
         return [

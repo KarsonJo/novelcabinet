@@ -98,9 +98,6 @@
                 <div class="tag.filter-error hidden">( ˘•ω•˘ )出错啦！请尝试刷新页面</div>
                 <div class="tag.filter-empty text-sm hidden">( ˘•ω•˘ )没有这种东西啦！</div>
             </div>
-            {{-- @foreach (KarsonJo\BookPost\get_books(6, 0) as $post)
-                <x-book-list-item-main :book-post="$post" />
-            @endforeach --}}
         </div>
         <div class="tag.filter-pagination flex gap-2 justify-center text-sm my-3">
             @foreach ($pagination as $p)
