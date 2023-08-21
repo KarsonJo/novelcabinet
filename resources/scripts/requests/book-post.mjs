@@ -11,7 +11,7 @@ const namespace = restDomain("kbp", "v1")
  */
 export async function createFavoriteList(title, visibility) {
     const href = `${namespace}/fav/create`
-    const headers = basicHeader
+    const headers = basicHeader()
     // 请求
     return await fetch(href, {
         method: 'POST',
@@ -30,7 +30,7 @@ export async function createFavoriteList(title, visibility) {
  */
 export async function updatePostFavorite(postId, favLists) {
     const href = `${namespace}/post-fav/update/${postId}`
-    const headers = basicHeader
+    const headers = basicHeader()
     // 请求
     return await fetch(href, {
         method: 'POST',

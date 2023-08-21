@@ -24,8 +24,7 @@ class BookContentsList1 extends Component
         else {
             if (!$book)
                 $book = get_post($book);
-            // $book = BookPost\get_book_from_post($book);
-            $this->contents = BookPost\get_book_contents($book);
+            $this->contents = new BookContents($book);
         }
         // $volumes = BookPost\get_book_volume_chapters($book->ID);
 

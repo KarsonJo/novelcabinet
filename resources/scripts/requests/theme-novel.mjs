@@ -14,7 +14,7 @@ const namespace = `/wp-json/${domain}/${version}`
  */
 export async function login(username, password, remember, redirectTo) {
     const href = `${namespace}/login`
-    const headers = basicHeader
+    const headers = basicHeader()
     // 请求
     return await fetch(href, {
         method: "POST",
@@ -35,7 +35,7 @@ export async function login(username, password, remember, redirectTo) {
 export async function updateUserdata(userdata) {
 
     const href = `${namespace}/userdata/update`
-    const headers = basicHeader
+    const headers = basicHeader()
     // 请求
     return await fetch(href, {
         method: "POST",

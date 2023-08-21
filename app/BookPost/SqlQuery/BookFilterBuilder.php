@@ -57,7 +57,7 @@ namespace KarsonJo\BookPost\SqlQuery {
             // $this->select('post_title')
             $this->from('posts posts')
                 ->where([
-                    'posts.post_type' => KBP_BOOK,
+                    'posts.post_type' => BookPost::KBP_BOOK,
                     'posts.post_parent' => 0,
                 ]);
         }

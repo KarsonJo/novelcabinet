@@ -21,7 +21,7 @@ namespace KarsonJo\BookPost\BookMeta {
         {
 
             // 只干预Book的父文章
-            if ($postarr['post_type'] != KBP_BOOK || $postarr['post_parent'] != 0)
+            if ($postarr['post_type'] != BookPost::KBP_BOOK || $postarr['post_parent'] != 0)
                 return $data;
 
             // return if the modified date is not set

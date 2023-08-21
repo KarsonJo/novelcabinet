@@ -1,4 +1,4 @@
-<div class="tag.catalog-item group min-h-[8rem] flex gap-4 p-2 hover:backdrop-contrast-75 transition-[backdrop-filter]">
+<div class="tag.catalog-item group/book min-h-[8rem] flex gap-4 p-2 hover:backdrop-contrast-75 transition-[backdrop-filter]">
     {{-- Left cover --}}
     <div class="tag.cover m-auto flex-shrink-0 w-[min(25%,5rem)]">
         <a href="{{ $book->permalink }}">

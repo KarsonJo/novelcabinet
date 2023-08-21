@@ -58,7 +58,7 @@
                         @if ($book->wordCount >= 1000)
                             <x-tag :tag="NovelCabinet\Utility\human_look_number($book->wordCount) . '字'" />
                         @endif
-                        @if (($fav = KarsonJo\BookPost\SqlQuery\get_favorite_count($book->ID)) > 0)
+                        @if (($fav = KarsonJo\BookPost\SqlQuery\BookQuery::getFavoriteCount($book->ID)) > 0)
                             <x-tag :tag="NovelCabinet\Utility\human_look_number($fav) . '收藏'" />
                         @endif
                     </div>
