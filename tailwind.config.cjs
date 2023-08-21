@@ -2,7 +2,8 @@
 const plugin = require('tailwindcss/plugin');
 
 module.exports = {
-  content: ['./index.php', './app/**/*.php', './resources/**/*.{php,vue,js}'],
+  // content: ['./index.php', './app/**/*.php', './resources/**/*.{php,vue,js}'],
+  content: ['./index.php', './resources/views/**/*.php', './resources/scripts/**/*.js'],
   theme: {
     extend: {
       backdropContrast: {
