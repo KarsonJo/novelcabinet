@@ -69,15 +69,18 @@ class BookFinder extends Composer
 
         // DB::connection('mysql2');
 
-        $maxPage = ($builder->count() - 1) / $limit + 1;
-        // echo $maxPage;
+        
+        $maxPage = ($builder->count_unique() - 1) / $limit + 1;
+        // echo $builder->count_unique();
+        // echo '<br/>';
+        // echo $limit;
         // echo '<br/>';
         // echo $page;
         // echo '<br/>';
         // print_r($this->getPagination($page, $maxPage));
         // echo '<br/>';
 
-        global $wp;
+        
         // global $post;
         // echo $wp->request;
         // echo '<br/>';
@@ -163,6 +166,8 @@ class BookFinder extends Composer
 
     function getPagination(int $curr, int $end, int $maxLen = 3): array
     {
+        print_r($curr);
+        print_r($end);
         $getPageUrl = function ($page) {
             global $wp;
             $query_args = $wp->query_vars;

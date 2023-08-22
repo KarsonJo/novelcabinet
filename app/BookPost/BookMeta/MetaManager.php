@@ -3,12 +3,22 @@
 namespace KarsonJo\BookPost\BookMeta {
 
     use KarsonJo\BookPost\BookPost;
+    use KarsonJo\BookPost\Route\QueryData;
+    use KarsonJo\BookPost\SqlQuery\BookQuery;
+    use TenQuality\WP\Database\QueryBuilder;
+    use WP_Query;
 
     class MetaManager
     {
         public static function init()
         {
             add_filter('wp_insert_post_data', [__CLASS__, 'preventUpdatingModifiedDate'], 1, 2);
+            add_filter('wp_insert_post_data', [__CLASS__, 'newPostWithParent'], 1, 2);
+            add_filter('wp_insert_post_data', [__CLASS__, 'newBookChapter'], 1, 2);
+            // add_filter('save_post_' . BookPost::KBP_BOOK, [__CLASS__, 'newBookChapter'], 1, 2);
+
+
+            add_action('pre_get_posts', [__CLASS__, 'customAdminPostOrder']);
         }
 
         /**
@@ -47,5 +57,96 @@ namespace KarsonJo\BookPost\BookMeta {
         // update post
         // $update_post = wp_update_post($postarr);
 
+        /**
+         * 支持新建文章时使用"post_parent"查询字符串指定父亲
+         * @return void 
+         */
+        static function newPostWithParent($data, $postarr)
+        {
+            // 不是新文章 或 不是书， 不关我事
+            if ($postarr['post_type'] != BookPost::KBP_BOOK || !empty($postarr['ID']))
+                return $data;
+
+            // 没设置，也不关我事
+            $parent_id = QueryData::getAdminQueryArg(QueryData::POST_PARENT);
+            if (empty($parent_id) || !is_numeric($parent_id))
+                return $data;
+
+            // 用户无权编辑父文章，驳回
+            if (!current_user_can('edit_post', $parent_id))
+                return $data;
+
+            // 父文章与当前文章不是同一类型，也不执行
+            if (get_post($parent_id)->post_type != $postarr['post_type'])
+                return $data;
+
+            // 满足所有条件，设置父亲
+            $data->post_parent = $parent_id;
+            return $data;
+        }
+
+        /**
+         * 支持新建文章时使用"chapter_of"指定文章为该书的新章节
+         * @return void 
+         */
+        static function newBookChapter($data, $postarr)
+        {
+            // print($postarr['post_type']);
+            // print($postarr['ID']);
+            // 不是新文章 或 不是书， 不关我事
+            if ($postarr['post_type'] != BookPost::KBP_BOOK || !empty($postarr['ID']))
+                return $data;
+
+            // 没设置，也不关我事
+            $book_id = QueryData::chapterOf();
+            // print($book_id);
+            if (!$book_id)
+                return $data;
+
+            // 用户无权编辑书本，驳回
+            if (!current_user_can('edit_post', $book_id))
+                return $data;
+            // print("can edit");
+
+            // 查找最后一卷
+            // 找不到任何卷，返回？？？创建？？？
+            // print(BookQuery::getLastVolumeID());
+            $parent_id = BookQuery::getLastVolumeID($book_id);
+            // print($parent_id);
+            if (!$parent_id)
+                return $data;
+            // print("found");
+
+            // 满足所有条件，设置父亲
+            $data['post_parent'] = $parent_id;
+            // $data['menu_order'] = 100;
+            return $data;
+        }
+
+        // /**
+        //  * 为书的新卷、章加menu order
+        //  * @return mixed 
+        //  */
+        // static function updateNewBookMenuOrder($data, $postarr)
+        // {
+        //     // 不是新文章 或 不是书， 不关我事
+        //     if ($postarr['post_type'] != BookPost::KBP_BOOK || !empty($postarr['ID']))
+        //         return $data;
+
+        //     if ($postarr)
+        // }
+
+        /**
+         * 改变Book类型的WordPress admin的文章排序
+         * @param mixed $query 
+         * @return void 
+         */
+        static function customAdminPostOrder($query)
+        {
+            if (is_admin() && $query->is_main_query() && $query->get('post_type') === BookPost::KBP_BOOK)
+                return BookQuery::WPQuerySetBookOrder($query);
+
+            return $query;
+        }
     }
 }

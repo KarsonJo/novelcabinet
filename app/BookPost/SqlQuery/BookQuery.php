@@ -7,6 +7,7 @@ namespace KarsonJo\BookPost\SqlQuery {
     use KarsonJo\Utilities\PostCache\CacheHelpers;
     use TenQuality\WP\Database\QueryBuilder;
     use WP_Post;
+    use WP_Query;
     use WP_Term;
     use WP_User;
 
@@ -78,6 +79,14 @@ namespace KarsonJo\BookPost\SqlQuery {
         }
 
 
+        public static function WPQuerySetBookOrder(WP_Query $query): WP_Query
+        {
+            $query->set('orderby', [
+                'menu_order' => 'ASC',
+                'ID' => 'ASC',
+            ]);
+            return $query;
+        }
 
         /**
          * 获取所有书类型
@@ -104,6 +113,38 @@ namespace KarsonJo\BookPost\SqlQuery {
                 $post = get_post($post->post_parent);
 
             return $post;
+        }
+
+        /**
+         * 以层次结构返回一本书的所有文章
+         * 包含的字段：爷id，爹id, id, post标题(parent2_id, parent_id, ID, post_title)
+         * @param WP_Post|int $book 
+         * @return object[]|false 
+         */
+        public static function bookHierarchy(WP_Post|int $book): array|false
+        {
+            if ($book instanceof WP_Post)
+                $book = $book->ID;
+
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'posts';
+            // A sql query to return all post titles
+            $results = $wpdb->get_results($wpdb->prepare("
+            select      p2.post_parent as parent2_id,
+                        p1.post_parent as parent_id,
+                        p1.ID,
+                        p1.post_title
+            from        $table_name p1
+            left join   $table_name p2 on p2.ID = p1.post_parent 
+            where       %d in (p1.post_parent, p2.post_parent) 
+                        and p1.post_status = 'publish'
+                        and p1.post_type = %s
+            order by    parent2_id, parent_id, p1.menu_order, p1.ID;", $book, BookPost::KBP_BOOK));
+
+            if (!$results)
+                return false;
+
+            return $results;
         }
 
         protected static function assertWpdbResult($result)
@@ -399,6 +440,22 @@ namespace KarsonJo\BookPost\SqlQuery {
                 $wpdb->query('ROLLBACK');
                 throw $e;
             }
+        }
+
+        public static function getLastVolumeID($book_id): int
+        {
+            // select IKD from wp_posts where post_parent=17 order by menu_order desc, post_title desc limit 1;
+            $result = QueryBuilder::create()
+                ->select('ID')
+                ->from('posts posts')
+                ->where(['post_parent' => $book_id], ['post_type' => BookPost::KBP_BOOK])
+                ->order_by('menu_order', 'DESC')
+                ->order_by('post_title', 'DESC')
+                ->value();
+
+            if (empty($result))
+                return 0;
+            return intval($result);
         }
     }
 }

@@ -10,6 +10,28 @@ namespace KarsonJo\BookPost\Route {
         const KBP_QS_FILTER_IN_FAVORITE = 'fav';
         const KBP_QS_FILTER_PAGE = 'page';
         const KBP_QS_FILTER_LIMIT = 'limit';
+
+        /**
+         * admin query args
+         */
+        const POST_PARENT = 'post_parent';
+        const NEW_CHAPTER_OF = 'chapter_of';
+        const NEW_VOLUME_OF = 'volume_of';
+
+        protected static array $args = [];
+
+        /**
+         * 注册一个查询字符串
+         * add_filter('query_vars')的封装
+         * 在此hook之后无效果
+         * @param string $key 
+         * @return void 
+         */
+        public static function RegistryQueryArg(string $key)
+        {
+            $args[] = $key;
+        }
+
         public static function init()
         {
             add_filter('query_vars', function ($vars) {
@@ -20,9 +42,15 @@ namespace KarsonJo\BookPost\Route {
                 $vars[] = static::KBP_QS_FILTER_IN_FAVORITE;
                 $vars[] = static::KBP_QS_FILTER_PAGE;
                 $vars[] = static::KBP_QS_FILTER_LIMIT;
-
+                // $a+$b: 如有重复，保持原来
+                $vars += static::$args;
                 return $vars;
             });
+        }
+
+        public static function getAdminQueryArg(string $key, $default = ''): string
+        {
+            return filter_input(INPUT_GET, $key, FILTER_SANITIZE_ENCODED)?:$default;
         }
 
 
@@ -45,7 +73,8 @@ namespace KarsonJo\BookPost\Route {
          */
         public static function filterLatest(): int
         {
-            return intval(get_query_var(static::KBP_QS_FILTER_LATEST));
+            // return intval(get_query_var(static::KBP_QS_FILTER_LATEST));
+            return static::getPositiveNumber(static::KBP_QS_FILTER_LATEST);
         }
 
         /**
@@ -76,7 +105,8 @@ namespace KarsonJo\BookPost\Route {
 
         public static function filterPage(): int
         {
-            return intval(get_query_var(static::KBP_QS_FILTER_PAGE));
+            // return intval(get_query_var(static::KBP_QS_FILTER_PAGE));
+            return static::getPositiveNumber(static::KBP_QS_FILTER_PAGE);
         }
 
         /**
@@ -85,7 +115,8 @@ namespace KarsonJo\BookPost\Route {
          */
         public static function filterLimit(): int
         {
-            return intval(get_query_var(static::KBP_QS_FILTER_LIMIT));
+            // return intval(get_query_var(static::KBP_QS_FILTER_LIMIT));
+            return static::getPositiveNumber(static::KBP_QS_FILTER_LIMIT);
         }
 
         /**
@@ -100,6 +131,38 @@ namespace KarsonJo\BookPost\Route {
             if ($var == 'desc')
                 return 2;
             return 0;
+        }
+
+        /**
+         * 是否设置了post_parent查询字符串
+         * 如果没有，返回0
+         * @return int 
+         */
+        public static function postParent(): int
+        {
+            return static::getPositiveNumber(static::POST_PARENT);
+        }
+
+        /**
+         * 是否设置了chapter_of查询字符串
+         * 如果没有，返回0
+         */
+        public static function chapterOf(): int
+        {
+            return static::getPositiveNumber(static::NEW_CHAPTER_OF);
+        }
+
+        /**
+         * 提取一个正整数查询字符串
+         * @param mixed $key 
+         * @return int 
+         */
+        protected static function getPositiveNumber($key): int
+        {
+            $num = static::getAdminQueryArg($key);
+            if (empty($num) || !is_numeric($num))
+                return 0;
+            return intval($num);
         }
     }
 }

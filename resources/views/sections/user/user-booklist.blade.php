@@ -1,9 +1,11 @@
 @php
+    use NovelCabinet\Utilities\Formatter;
+    use KarsonJo\BookPost\SqlQuery\BookQuery;
+    use KarsonJo\BookPost\BookPost;
+    use KarsonJo\BookPost\Route\QueryData;
     $books = KarsonJo\BookPost\SqlQuery\BookFilterBuilder::create(null, false)
         ->of_author(1)
         ->get_as_book();
-    use NovelCabinet\Utilities\Formatter;
-    use KarsonJo\BookPost\SqlQuery\BookQuery;
     $book = \KarsonJo\BookPost\Book::initBookFromPost(14);
     
 @endphp
@@ -55,9 +57,10 @@
 
                         <div class="flex gap-2 flex-wrap grow items-end justify-end">
                             <div class="h-8 sm:h-10 sm:text-lg">
-                                <button class="hover:bg-amber-500 h-full aspect-square hover:text-white rounded-lg shadow-lg transition-colors border border-transparent text-amber-500 bg-white border-amber-500">
-                                    <i class="fa-light fa-file-circle-plus"></i>
-                                </button>
+                                <a href="{!! add_query_arg(['post_type' => BookPost::KBP_BOOK, QueryData::NEW_CHAPTER_OF => $book->ID], admin_url('post-new.php')) !!}">
+                                    <button class="hover:bg-amber-500 h-full aspect-square hover:text-white rounded-lg shadow-lg transition-colors border border-transparent text-amber-500 bg-white border-amber-500">
+                                        <i class="fa-light fa-file-circle-plus"></i>
+                                    </button></a>
                                 <button class="hover:bg-blue-400 h-full aspect-square hover:text-white rounded-lg shadow-lg transition-colors border border-transparent text-blue-400 bg-white border-blue-400">
                                     <i class="fa-light fa-list-tree"></i>
                                 </button>

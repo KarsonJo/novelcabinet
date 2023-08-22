@@ -366,6 +366,13 @@ namespace KarsonJo\BookPost\SqlQuery {
             // return [];
         }
 
+        public function count_unique(string $column = "ID", bool $bypass_limit = true):int
+        {
+            
+            return $this->count("distinct posts.$column",$bypass_limit);
+            
+        }
+
         //==================================================
         // 简单的预缓存支持
 

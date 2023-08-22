@@ -47,6 +47,7 @@ namespace NovelCabinet\Services\Route {
         {
             register_rest_route($namespace, $path, array(
                 'methods' => 'POST',
+                'permission_callback' => '__RETURN_TRUE',
                 'callback' => function ($request) {
                     $username = $request['username'];
                     $password = $request['password'];
@@ -79,6 +80,7 @@ namespace NovelCabinet\Services\Route {
         {
             register_rest_route($namespace, $path, [
                 'methods' => 'POST',
+                'permission_callback' => '__RETURN_TRUE',
                 'callback' => function ($request) {
                     global $errors;
                     $user = wp_get_current_user();

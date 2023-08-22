@@ -26,6 +26,7 @@ namespace KarsonJo\BookPost\Route {
         {
             register_rest_route($namespace, $path, array(
                 'methods' => 'POST',
+                'permission_callback' => '__RETURN_TRUE',
                 'callback' => function ($request) {
                     $post_id = $request['postId'];
                     $rating = $request['rating'];
@@ -56,6 +57,7 @@ namespace KarsonJo\BookPost\Route {
         {
             register_rest_route($namespace, $path, array(
                 'methods' => 'POST',
+                'permission_callback' => '__RETURN_TRUE',
                 'callback' => function ($request) {
                     $user = wp_get_current_user();
                     $title = $request['title'];
@@ -87,6 +89,7 @@ namespace KarsonJo\BookPost\Route {
         {
             register_rest_route($namespace, $path, [
                 'methods' => 'POST',
+                'permission_callback' => '__RETURN_TRUE',
                 'callback' => function ($request) {
                     $user = wp_get_current_user();
                     $post_id = $request['postId'];

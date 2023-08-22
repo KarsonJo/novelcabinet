@@ -51,28 +51,28 @@ namespace KarsonJo\BookPost {
             //     $post = $post->ID;
 
 
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'posts';
-            // A sql query to return all post titles
-            $results = $wpdb->get_results($wpdb->prepare("
-        select      p2.post_parent as parent2_id,
-                    p1.post_parent as parent_id,
-                    p1.ID,
-                    p1.post_title
-        from        $table_name p1
-        left join   $table_name p2 on p2.ID = p1.post_parent 
-        where       %d in (p1.post_parent, p2.post_parent) 
-                    and p1.post_status = 'publish'
-                    and p1.post_type = %s
-        order by    parent2_id, parent_id, p1.menu_order, p1.post_title;", $book, BookPost::KBP_BOOK));
+            //     global $wpdb;
+            //     $table_name = $wpdb->prefix . 'posts';
+            //     // A sql query to return all post titles
+            //     $results = $wpdb->get_results($wpdb->prepare("
+            // select      p2.post_parent as parent2_id,
+            //             p1.post_parent as parent_id,
+            //             p1.ID,
+            //             p1.post_title
+            // from        $table_name p1
+            // left join   $table_name p2 on p2.ID = p1.post_parent 
+            // where       %d in (p1.post_parent, p2.post_parent) 
+            //             and p1.post_status = 'publish'
+            //             and p1.post_type = %s
+            // order by    parent2_id, parent_id, p1.menu_order, p1.ID;", $book, BookPost::KBP_BOOK));
+
+            $results = BookQuery::bookHierarchy($book);
 
             if (!$results)
                 return false;
 
             // 缓存文章基本信息
-            $ids = array_map(function ($result) {
-                return $result->ID;
-            }, $results);
+            $ids = array_map(fn ($result) => $result->ID, $results);
 
             CacheBuilder::create()
                 ->cachePosts($ids)
