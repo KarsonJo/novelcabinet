@@ -22,6 +22,7 @@ namespace KarsonJo\BookPost {
         public string $author;
         public string $excerpt;
         public ?DateTime $updateTime;
+        public string $status;
         /**
          * Book类型的Genre Taxonomy
          */
@@ -39,13 +40,6 @@ namespace KarsonJo\BookPost {
          * 懒加载变量 $this->contents;
          */
         private ?BookContents $_contents = null;
-
-        // /**
-        //  * 只用ID初始化的WP_Post对象
-        //  * 用于某些只需要id，但需要传入WP_Post的WordPress函数
-        //  * （避免直接传入id多查询一次数据库） <--木大哒
-        //  */
-        // protected WP_Post $_post;
 
         protected function __construct()
         {
@@ -77,6 +71,7 @@ namespace KarsonJo\BookPost {
             $book->rating = round($params['rating'], 2) ?? 0;
             $book->ratingWeight = $params['rating_weight'] ?? 0;
             $book->wordCount = $params['word_count'] ?? 0;
+            $book->status = $params['post_status'] ?? '';
 
             if (isset($params['post_author']))
                 $book->author = get_the_author_meta('display_name', $params['post_author']);
@@ -89,7 +84,7 @@ namespace KarsonJo\BookPost {
             $book->cover = is_array($images) ? $images[0] : "";
 
 
-            $book->genres = get_the_terms($book->ID, $bookGenre ?? BookPost::KBP_BOOK_GENRE ?? "category");
+            $book->genres = get_the_terms($book->ID, $bookGenre ?? BookPost::KBP_BOOK_GENRE ?? "category")?:[];
 
             return $book;
         }

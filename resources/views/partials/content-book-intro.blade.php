@@ -1,3 +1,7 @@
+@php
+use NovelCabinet\Utilities\Formatter;
+@endphp
+
 {{-- Absolute gradient background --}}
 <div class="absolute inset-0 -z-50">
     <div class="flex flex-col  opacity-50">
@@ -56,10 +60,10 @@
                             <x-tag :tag="$tag->name" />
                         @endforeach
                         @if ($book->wordCount >= 1000)
-                            <x-tag :tag="NovelCabinet\Utility\human_look_number($book->wordCount) . '字'" />
+                            <x-tag :tag="Formatter::humanLookNumber($book->wordCount) . '字'" />
                         @endif
                         @if (($fav = KarsonJo\BookPost\SqlQuery\BookQuery::getFavoriteCount($book->ID)) > 0)
-                            <x-tag :tag="NovelCabinet\Utility\human_look_number($fav) . '收藏'" />
+                            <x-tag :tag="Formatter::humanLookNumber($fav) . '收藏'" />
                         @endif
                     </div>
 

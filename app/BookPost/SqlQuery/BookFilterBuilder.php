@@ -40,7 +40,7 @@ namespace KarsonJo\BookPost\SqlQuery {
      * SELECT P.ID AS post_id, COUNT(DISTINCT F.user_id) AS num_of_users FROM wp_posts P LEFT JOIN wp_kbp_favorite_relationships R ON P.ID = R.post_id LEFT JOIN wp_kbp_favorite_lists F ON R.list_id = F.ID GROUP BY P.ID HAVING num_of_users > 0;
      */
 
-
+    use Exception;
     use KarsonJo\BookPost\Book;
     use KarsonJo\BookPost\BookPost;
     use KarsonJo\Utilities\PostCache\CacheBuilder;
@@ -70,6 +70,7 @@ namespace KarsonJo\BookPost\SqlQuery {
         public static function create($id = null, bool $published = true): BookFilterBuilder
         {
             $builder = new self($id);
+            $builder->no_auto_draft();
             if ($published)
                 $builder->published();
             return $builder;
@@ -117,6 +118,20 @@ namespace KarsonJo\BookPost\SqlQuery {
         {
             $this->where([
                 'post_status' => 'publish',
+            ]);
+            return $this;
+        }
+
+        /**
+         * 剔除自动草稿 
+         */
+        public function no_auto_draft(): BookFilterBuilder
+        {
+            $this->where( [
+                'post_status' => [
+                    'operator' => '<>',
+                    'value'    => 'auto-draft',
+                ],
             ]);
             return $this;
         }
@@ -313,6 +328,7 @@ namespace KarsonJo\BookPost\SqlQuery {
                 ->select('posts.post_title')
                 ->select('posts.post_excerpt')
                 ->select('posts.post_modified update_date')
+                ->select('posts.post_status')
                 ->select('mt.rating_weight')
                 ->select('mt.rating_avg rating')
                 ->select('mt.word_count')

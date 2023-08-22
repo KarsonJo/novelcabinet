@@ -37,7 +37,7 @@ namespace NovelCabinet\Services\Route {
                 ],
                 locate_template(app('sage.finder')->locate('user')),
                 [
-                    fn () => !is_user_logged_in() && wp_redirect(WebHelpers::getUserLoginUrl(), 301),
+                    fn () => !is_user_logged_in() && wp_redirect(WebHelpers::getUserLoginUrl(), 302),
                     fn () => Router::atPath('^user/?$') && wp_redirect(WebHelpers::getUserHomeUrl(UserEndpoints::Settings), 301),
                 ]
             );
@@ -45,7 +45,7 @@ namespace NovelCabinet\Services\Route {
             Router::registerRoute(
                 '^login/?$',
                 locate_template(app('sage.finder')->locate('login')),
-                fn () => is_user_logged_in() && wp_redirect(WebHelpers::getUserHomeUrl(), 301)
+                fn () => is_user_logged_in() && wp_redirect(WebHelpers::getUserHomeUrl(), 302)
             );
             // https://my.site/external-redirect
             Router::registerRoute(
