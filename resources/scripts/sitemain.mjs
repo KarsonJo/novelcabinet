@@ -15,6 +15,7 @@ import { ResponseError } from "./errors.mjs"
 
 import * as bookPost from "@scripts/requests/book-post.mjs"
 import * as theme from "@scripts/requests/theme-novel.mjs"
+import { initBookManager } from "./user/book-manager.mjs";
 
 
 // =========External Link Warning=========
@@ -420,4 +421,5 @@ export function siteInitialize() {
 
     //user 
     initUserUtilities()
+    initBookManager()
 }

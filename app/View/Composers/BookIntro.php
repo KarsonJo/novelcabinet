@@ -35,12 +35,12 @@ class BookIntro extends Composer
 
         $this_book = Book::initBookFromPost($post->ID);
         $contents = $this_book->contents;
-        $first_chapter = $contents->get_first_chapter();
+        $first_chapter = $contents->getFirstChapter();
         $has_content = boolval($first_chapter);
         // print_r($book->ratingWeight);
         return [
             'contents' => $contents,
-            'volumes' => $contents->get_volumes(),
+            'volumes' => $contents->getVolumes(),
             'hasContent' => $has_content,
             'readingLink' => $has_content ? get_permalink($first_chapter->ID) : '#',
             'book' => $this_book,

@@ -14,6 +14,7 @@ module.exports = {
       gridTemplateColumns: {
         'list-item': 'repeat(auto-fill, minmax(300px, 1fr))',
         'contents-item': 'repeat(auto-fill, minmax(200px, 1fr))',
+        'draggable-contents-item': 'repeat(auto-fill, minmax(256px, 1fr))',
       },
       colors: {
         'theme-bg1': 'rgb(var(--theme-primary-bg) / <alpha-value>)',

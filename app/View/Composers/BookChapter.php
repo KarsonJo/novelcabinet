@@ -28,8 +28,8 @@ class BookChapter extends Composer
 
         $book = get_post();
         $contents = new BookContents($book);
-        $prev_chapter = $contents->previous_chapter();
-        $next_chapter = $contents->next_chapter();
+        $prev_chapter = $contents->previousChapter();
+        $next_chapter = $contents->nextChapter();
         return [
             'contents' => $contents,
             'bookUrl' => get_permalink($book),

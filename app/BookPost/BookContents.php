@@ -2,6 +2,7 @@
 
 namespace KarsonJo\BookPost {
 
+    use App\View\Composers\BookChapter;
     use KarsonJo\BookPost\SqlQuery\BookQuery;
     use KarsonJo\Utilities\PostCache\CacheBuilder;
     use WP_Post;
@@ -15,10 +16,7 @@ namespace KarsonJo\BookPost {
     class BookContents implements \ArrayAccess, \Iterator, \Countable
     {
         private array $contents = [];
-        /**
-         * 目前加载的书籍
-         */
-        private int $book = -1;
+
         /**
          * 目前所在卷
          */
@@ -32,41 +30,27 @@ namespace KarsonJo\BookPost {
          * 构建目录，如果传入章节id，还会设置目录的活跃位置
          * @param $post 书、卷、章节的wp对象或id
          */
-        public function __construct(WP_Post|int $post)
+        public function __construct(WP_Post|int $post, bool $public = true)
         {
-            $this->loadContents($post);
+            $this->loadContents($post, $public);
         }
 
         /**
          * 构建目录，如果传入章节id，还会设置目录的活跃位置
-         * @param $post 书、卷、章节的wp对象或id
+         * @param WP_Post|int $post 书、卷、章节的wp对象或id
+         * @param array|string $public 是否公开，如果是，只会查询已公开章节
          */
-        public function loadContents(WP_Post|int $post)
+        public function loadContents(WP_Post|int $post, bool $public)
         {
 
             $book = BookQuery::rootPost($post)->ID;
-            $this->book = $book;
 
-            // if ($post instanceof WP_Post)
-            //     $post = $post->ID;
+            if ($public)
+                $status = 'publish';
+            else
+                $status = ['draft', 'publish', 'trash', 'future', 'pending', 'private'];
 
-
-            //     global $wpdb;
-            //     $table_name = $wpdb->prefix . 'posts';
-            //     // A sql query to return all post titles
-            //     $results = $wpdb->get_results($wpdb->prepare("
-            // select      p2.post_parent as parent2_id,
-            //             p1.post_parent as parent_id,
-            //             p1.ID,
-            //             p1.post_title
-            // from        $table_name p1
-            // left join   $table_name p2 on p2.ID = p1.post_parent 
-            // where       %d in (p1.post_parent, p2.post_parent) 
-            //             and p1.post_status = 'publish'
-            //             and p1.post_type = %s
-            // order by    parent2_id, parent_id, p1.menu_order, p1.ID;", $book, BookPost::KBP_BOOK));
-
-            $results = BookQuery::bookHierarchy($book);
+            $results = BookQuery::bookHierarchy($book, $status);
 
             if (!$results)
                 return false;
@@ -86,14 +70,14 @@ namespace KarsonJo\BookPost {
                 $this->contents[$result->parent_id][] = new BookContentsItem($result); //加到最后
             }
 
-            $this->set_active_chapter($post);
+            $this->setActiveChapter($post);
         }
 
         /**
          * 目录是否为空
          * @return bool
          */
-        public function book_empty(): bool
+        public function bookEmpty(): bool
         {
             return !$this->contents || !$this->contents[array_key_first($this->contents)];
         }
@@ -101,9 +85,9 @@ namespace KarsonJo\BookPost {
         /**
          * 书的第一章
          */
-        public function get_first_chapter(): ?BookContentsItem
+        public function getFirstChapter(): ?BookContentsItem
         {
-            if ($this->book_empty())
+            if ($this->bookEmpty())
                 return null;
 
             $first_volume = $this->contents[array_key_first($this->contents)][0]->ID;
@@ -116,9 +100,9 @@ namespace KarsonJo\BookPost {
         /**
          * @return BookContentsItem[] 所有卷
          */
-        public function get_volumes(): array
+        public function getVolumes(): array
         {
-            if ($this->book_empty())
+            if ($this->bookEmpty())
                 return [];
             return $this->contents[array_key_first($this->contents)];
         }
@@ -128,7 +112,7 @@ namespace KarsonJo\BookPost {
          * @param int $vkey 卷在目录的索引
          * @return BookContentsItem[]
          */
-        private function get_volume_chapters(int $vkey): array
+        private function getVolumeChapters(int $vkey): array
         {
             return $this->contents[$this->contents[array_key_first($this->contents)][$vkey]->ID];
         }
@@ -139,12 +123,12 @@ namespace KarsonJo\BookPost {
          * @param WP_Post|int $post 书的卷或章
          * @return array [卷索引，章索引]二元组，如某项不符合，返回-1
          */
-        public function locate_chapter(WP_Post|int $post): array
+        public function locateChapter(WP_Post|int $post): array
         {
             if ($post instanceof WP_Post)
                 $post = $post->ID;
 
-            foreach ($this->get_volumes() as $vkey => $volume) {
+            foreach ($this->getVolumes() as $vkey => $volume) {
                 if ($volume->ID == $post)
                     return [$vkey, -1];
                 foreach ($this->contents[$volume->ID] as $ckey => $chapter)
@@ -154,7 +138,7 @@ namespace KarsonJo\BookPost {
             return [-1, -1];
         }
 
-        private function pos_or_default(array $pos): array
+        private function posOrDefault(array $pos): array
         {
             return $pos ? $pos : [$this->volume_index, $this->chapter_index];
         }
@@ -163,9 +147,9 @@ namespace KarsonJo\BookPost {
          * @param array $curr [卷索引，章索引]二元组，当前章节在目录的位置，缺省为目录的记录位置
          * @return BookContentsItem|null 上一章的目录对象，如没有，返回null
          */
-        public function previous_chapter(array $curr = []): BookContentsItem|null
+        public function previousChapter(array $curr = []): BookContentsItem|null
         {
-            [$vkey, $ckey] = $this->pos_or_default($curr);
+            [$vkey, $ckey] = $this->posOrDefault($curr);
 
             if ($vkey < 0 || $ckey < 0)
                 return null;
@@ -173,35 +157,70 @@ namespace KarsonJo\BookPost {
             if ($ckey == 0) {
                 if ($vkey == 0)
                     return null; //没有了
-                $pre_volume = $this->get_volume_chapters($vkey - 1);
+                $pre_volume = $this->getVolumeChapters($vkey - 1);
                 return $pre_volume[count($pre_volume) - 1]; //上一卷最后一章
             }
-            return $this->get_volume_chapters($vkey)[$ckey - 1]; //这一卷上一章
+            return $this->getVolumeChapters($vkey)[$ckey - 1]; //这一卷上一章
         }
 
         /**
          * @param array $curr [卷索引，章索引]二元组，当前章节在目录的位置，缺省为目录的记录位置
          * @return BookContentsItem|null 下一章的目录对象，如没有，返回null
          */
-        public function next_chapter(array $curr = []): BookContentsItem|null
+        public function nextChapter(array $curr = []): BookContentsItem|null
         {
-            [$vkey, $ckey] = $this->pos_or_default($curr);
+            [$vkey, $ckey] = $this->posOrDefault($curr);
 
             if ($vkey < 0 || $ckey < 0)
                 return null;
 
-            if ($ckey == count($this->get_volume_chapters($vkey)) - 1) {
-                if ($vkey == count($this->get_volumes()) - 1)
+            if ($ckey == count($this->getVolumeChapters($vkey)) - 1) {
+                if ($vkey == count($this->getVolumes()) - 1)
                     return null; //没有了
-                $next_volume = $this->get_volume_chapters($vkey + 1);
+                $next_volume = $this->getVolumeChapters($vkey + 1);
                 return $next_volume[0]; //下一卷第一章
             }
-            return $this->get_volume_chapters($vkey)[$ckey + 1]; //这一卷下一章
+            return $this->getVolumeChapters($vkey)[$ckey + 1]; //这一卷下一章
         }
 
-        public function set_active_chapter(WP_Post|int $post)
+        public function setActiveChapter(WP_Post|int $post)
         {
-            [$this->volume_index, $this->chapter_index] = $this->locate_chapter($post);
+            [$this->volume_index, $this->chapter_index] = $this->locateChapter($post);
+        }
+
+        /**
+         * 返回一个可转化为json的通用格式
+         * 保持层次结构，
+         * 书结点有：{id:int , volumes:[{volume1}, {volume2}, ...]}
+         * 卷结点有：{id:int , title:string, url:string, chapters:[{chapter1}, {chapter2}, ...]}
+         * 章结点有：{id:int , title:string, url:string}
+         * @return void 
+         */
+        public function toJsonArray(): array
+        {
+            $bookObj = [
+                'id' => array_key_first($this->contents),
+                'volumes' => [],
+            ];
+
+            foreach ($this->getVolumes() as $volume) {
+                $volumeObj = [
+                    'id' => $volume->ID,
+                    'title' => $volume->post_title,
+                    'url' => get_permalink($volume->ID),
+                    'chapters' => [],
+                ];
+
+                foreach ($this[$volume->ID] as $chapter)
+                    $volumeObj['chapters'][] = [
+                        'id' => $chapter->ID,
+                        'title' => $chapter->post_title,
+                        'url' => get_permalink($chapter->ID),
+                    ];
+                    
+                $bookObj['volumes'][] = $volumeObj;
+            }
+            return $bookObj;
         }
 
 

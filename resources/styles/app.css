@@ -248,7 +248,7 @@
         /* margin: 5px 0; */
     }
 
-    /* ==================== dashboard nav ==================== */
+    /* ==================== user dashboard nav ==================== */
     /* 伪元素还是不适合用tailwind，太勾八长了 */
     .inverse-rounded-right::before,
     .inverse-rounded-right::after {
@@ -267,7 +267,32 @@
         -webkit-mask-image: radial-gradient(farthest-side at 0 100%, #0000 98%, #000 100%);
     }
 
-    
+    /* ==================== user dashboard nav ==================== */
+    .btn-style1 {
+        @apply cursor-pointer rounded-lg shadow transition-colors border border-transparent;
+    }
+
+    .btn-style1-blue {
+        @apply btn-style1;
+        @apply hover:bg-blue-400 hover:text-white text-blue-400 bg-white border-blue-400;
+    }
+
+    .btn-style1-amber {
+        @apply btn-style1;
+        @apply hover:bg-amber-500 hover:text-white text-amber-500 bg-white border-amber-500;
+    }
+
+    .btn-style1-rose {
+        @apply btn-style1;
+        @apply hover:bg-rose-500 hover:text-white text-rose-500 bg-white border-rose-500;
+    }
+
+    .btn-style2-rose {
+        @apply btn-style1;
+        @apply bg-rose-500 text-white hover:text-rose-500 hover:bg-white hover:border-rose-500;
+    }
+
+
 
     .transition-underline-center {
         @apply transition-underline;

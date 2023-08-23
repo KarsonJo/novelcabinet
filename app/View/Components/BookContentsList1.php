@@ -30,8 +30,8 @@ class BookContentsList1 extends Component
 
         // if (array_key_exists(0, $volumes) && array_key_exists(1, $volumes[0]))
         //     $first_chapter = $volumes[0][1];
-        $this->volumes = $this->contents->get_volumes();
-        $this->hasContent = boolval($this->contents->get_first_chapter());
+        $this->volumes = $this->contents->getVolumes();
+        $this->hasContent = boolval($this->contents->getFirstChapter());
 
         // global $post;
         // $this->contents->set_active_chapter($post);

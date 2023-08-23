@@ -41,3 +41,12 @@ export async function updatePostFavorite(postId, favLists) {
     })
 }
 
+export async function getContents(postId) {
+    const href = `${namespace}/contents/get/${postId}`
+    const headers = basicHeader()
+    // 请求
+    return await fetch(href, {
+        method: 'GET',
+        headers: headers
+    })
+}

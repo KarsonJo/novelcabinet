@@ -3,6 +3,7 @@
 namespace KarsonJo\BookPost\Route {
 
     use Exception;
+    use KarsonJo\BookPost\BookContents;
     use WP_REST_Response;
 
     use KarsonJo\BookPost\SqlQuery as Query;
@@ -19,6 +20,7 @@ namespace KarsonJo\BookPost\Route {
                 static::bookRating($namespace);
                 static::createFavoriteList($namespace);
                 static::updatePostFavorite($namespace);
+                static::getBookContentsJson($namespace);
             });
         }
 
@@ -104,6 +106,32 @@ namespace KarsonJo\BookPost\Route {
                         return new WP_REST_Response(['title' => '收藏失败', 'message' => $e->getMessage()], 400);
                     }
                     return new WP_REST_Response(['title' => '收藏成功', 'message' => "文章收藏状态已更新"]);
+                }
+            ]);
+        }
+
+        static function getBookContentsJson($namespace, $path = '/contents/get/(?P<postId>\d+)')
+        {
+            register_rest_route($namespace, $path, [
+                'methods' => 'GET',
+                'permission_callback' => '__RETURN_TRUE',
+                'callback' => function ($request) {
+                    $user = wp_get_current_user();
+                    $post_id = intval($request['postId']);
+
+                    if (!$post_id)
+                        return new WP_REST_Response(['title' => __('error-title-no-post-id', 'NovelCabinet'), 'message' => __('error-msg-no-post-id', 'NovelCabinet')], 400);
+
+                    // 获取书
+                    $post_id = BookQuery::rootPost($post_id)->ID;
+
+                    if ($user->ID && current_user_can('read_post', $post_id))
+                        $contents = new BookContents($post_id, false); // 输出所有文章
+                    else
+                        $contents = new BookContents($post_id, true); // 输出公开文章
+
+
+                    return new WP_REST_Response($contents->toJsonArray());
                 }
             ]);
         }

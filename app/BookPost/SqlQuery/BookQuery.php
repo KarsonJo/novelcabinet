@@ -119,27 +119,58 @@ namespace KarsonJo\BookPost\SqlQuery {
          * 以层次结构返回一本书的所有文章
          * 包含的字段：爷id，爹id, id, post标题(parent2_id, parent_id, ID, post_title)
          * @param WP_Post|int $book 
+         * @param string[]|string $status 包含的wordpress文章状态
          * @return object[]|false 
          */
-        public static function bookHierarchy(WP_Post|int $book): array|false
+        public static function bookHierarchy(WP_Post|int $book, array|string $status = 'publish'): array|false
         {
             if ($book instanceof WP_Post)
                 $book = $book->ID;
 
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'posts';
-            // A sql query to return all post titles
-            $results = $wpdb->get_results($wpdb->prepare("
-            select      p2.post_parent as parent2_id,
-                        p1.post_parent as parent_id,
-                        p1.ID,
-                        p1.post_title
-            from        $table_name p1
-            left join   $table_name p2 on p2.ID = p1.post_parent 
-            where       %d in (p1.post_parent, p2.post_parent) 
-                        and p1.post_status = 'publish'
-                        and p1.post_type = %s
-            order by    parent2_id, parent_id, p1.menu_order, p1.ID;", $book, BookPost::KBP_BOOK));
+            if (!is_numeric($book))
+                return false;
+
+            // if (is_array($status))
+            //     $status = implode(", ")
+
+            $query = QueryBuilder::create()
+                ->select('p2.post_parent as parent2_id')
+                ->select('p1.post_parent as parent_id')
+                ->select('p1.ID')
+                ->select('p1.post_title')
+                ->from('posts p1')
+                ->join('posts p2', [['key_a' => 'p2.ID', 'key_b' => 'p1.post_parent']])
+                ->where([
+                    'raw' => "$book in (p1.post_parent, p2.post_parent)",
+                    'p1.post_type' => BookPost::KBP_BOOK,
+                ])
+                ->order_by('parent2_id')
+                ->order_by('parent_id')
+                ->order_by('p1.menu_order')
+                ->order_by('p1.ID');
+
+            if (is_array($status))
+                $query->where(['p1.post_status' => ['operator' => 'IN', 'value' => $status]]);
+            else
+                $query->where(['p1.post_status' => $status]);
+
+
+            // global $wpdb;
+            // $table_name = $wpdb->prefix . 'posts';
+            // // A sql query to return all post titles
+            // $results = $wpdb->get_results($wpdb->prepare("
+            // select      p2.post_parent as parent2_id,
+            //             p1.post_parent as parent_id,
+            //             p1.ID,
+            //             p1.post_title
+            // from        $table_name p1
+            // left join   $table_name p2 on p2.ID = p1.post_parent 
+            // where       %d in (p1.post_parent, p2.post_parent) 
+            //             and p1.post_status = %s
+            //             and p1.post_type = %s
+            // order by    parent2_id, parent_id, p1.menu_order, p1.ID;", $book, $status, BookPost::KBP_BOOK));
+            
+            $results = $query->get();
 
             if (!$results)
                 return false;

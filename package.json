@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@tailwindcss/line-clamp": "^0.4.4",
+    "muuri": "^0.9.5",
     "swiper": "8.4.7"
   }
 }
