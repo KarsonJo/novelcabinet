@@ -282,6 +282,11 @@
         @apply hover:bg-amber-500 hover:text-white text-amber-500 bg-white border-amber-500;
     }
 
+    .btn-style1-green {
+        @apply btn-style1;
+        @apply hover:bg-green-500 hover:text-white text-green-500 bg-white border-green-500;
+    }
+
     .btn-style1-rose {
         @apply btn-style1;
         @apply hover:bg-rose-500 hover:text-white text-rose-500 bg-white border-rose-500;
@@ -292,7 +297,16 @@
         @apply bg-rose-500 text-white hover:text-rose-500 hover:bg-white hover:border-rose-500;
     }
 
-
+    /* ==================== user dashboard nav ==================== */
+    .muuri-item.muuri-item-dragging {
+        z-index: 3;
+    }
+    .muuri-item.muuri-item-releasing {
+        z-index: 2;
+    }
+    .muuri-item.muuri-item-hidden {
+        z-index: 0;
+    }
 
     .transition-underline-center {
         @apply transition-underline;

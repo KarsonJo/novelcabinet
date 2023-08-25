@@ -1,6 +1,10 @@
 import * as utils from "@scripts/dom-utils.mjs"
 import * as novel from "@scripts/requests/theme-novel.mjs"
 
+function getDashboardContent(el) {
+    return (el??document).querySelector(".tag-dashboard-content");
+}
+
 /**
  * 提交修改用户信息表单
  * @returns 
@@ -80,6 +84,9 @@ function initDashboardMenu() {
 
     const mediaQueryLarge = window.matchMedia('(max-width: 1024px)')
 
+    /**
+     * 菜单显示隐藏
+     */
     dashboardToggle.addEventListener("click", () => {
         dashboard.classList.toggle("opened")
         if (!mediaQueryLarge.matches) return;
@@ -87,13 +94,70 @@ function initDashboardMenu() {
         // 给最小宽度，实现推挤效果……花里胡哨
         if (dashboard.classList.contains("opened"))
             main.style.minWidth = `${main.offsetWidth}px`
-        else
-            main.style.minWidth = ''
+        else {
+            dashboard.addEventListener("transitioned", () => main.style.minWidth = '', { once: true })
+        }
     })
+
+    // /**
+    //  * 菜单项点击 局部刷新菜单
+    //  */
+    // const dashboardMenu = document.querySelector(".tag-dashboard-menu");
+    // dashboardMenu.addEventListener("click", event => {
+    //     const target = event.target;
+    //     const activeItem = target.closest("a");
+    //     if (activeItem) {
+    //         for (const items of dashboardMenu.querySelectorAll("a"))
+    //             items.classList.remove("selected");
+
+    //         activeItem.classList.add("selected");
+    //         fetchDashboardPage(activeItem.href);
+    //         // 更改路径
+    //         history.pushState("", "", activeItem.href);
+    //         event.preventDefault();
+    //     }
+    // })
+
 }
+
+// async function fetchDashboardPage(href = undefined) {
+
+//     if (!href)
+//         href = window.location.href;
+
+//     const dashboardContent = getDashboardContent();
+
+//     try {
+//         // 改变视觉
+//         dashboardContent.innerText = '';
+//         setDashboardLoading(true);
+//         // 请求
+//         const response = await fetch(href)
+
+//         const html = await response.text();
+//         const parser = new DOMParser();
+
+//         const doc = parser.parseFromString(html, 'text/html');
+//         dashboardContent.replaceWith(getDashboardContent(doc));
+//     }
+//     catch (exception) {
+//         booklist.innerText = '=== ERROR ===';
+//         console.log(exception);
+//     }
+//     finally {
+//         setDashboardLoading(false);
+//     }
+
+//     function setDashboardLoading(visible) {
+//         // const el = getBookLoadingIndicator();
+//         document.querySelector(".tag-dashboard-loading").style.display = visible ? "block" : ""
+//     }
+
+
+// }
 
 export function initUserDashboard() {
     // initUserMenuSwiper()
-    initDashboardMenu()
-    initProfileSettings()
+    initDashboardMenu();
+    initProfileSettings();
 }

@@ -144,6 +144,7 @@ module.exports = {
       addVariant('show', '&.show');
       addVariant('not-show', '&:not(.show)');
       addVariant('selected', '&.selected');
+      addVariant('dragging', '&.dragging');
       addVariant('success', '&.style-success');
       addVariant('warning', '&.style-warning');
       addVariant('error', '&.style-error');

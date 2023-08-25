@@ -9,6 +9,7 @@ namespace KarsonJo\BookPost\Route {
     use KarsonJo\BookPost\SqlQuery as Query;
     use KarsonJo\BookPost\SqlQuery\BookQuery;
     use Symfony\Component\Mime\Message;
+    use TenQuality\WP\Database\QueryBuilder;
 
     class APIRoute
     {
@@ -21,6 +22,8 @@ namespace KarsonJo\BookPost\Route {
                 static::createFavoriteList($namespace);
                 static::updatePostFavorite($namespace);
                 static::getBookContentsJson($namespace);
+
+                static::bookRepresentation($namespace);
             });
         }
 
@@ -110,8 +113,17 @@ namespace KarsonJo\BookPost\Route {
             ]);
         }
 
-        static function getBookContentsJson($namespace, $path = '/contents/get/(?P<postId>\d+)')
+        /**
+         * 目录JSON representation
+         * @param mixed $namespace 
+         * @param string $path 
+         * @return void 
+         */
+        static function getBookContentsJson($namespace, $path = '/contents/(?P<postId>\d+)')
         {
+            /**
+             * 获取目录
+             */
             register_rest_route($namespace, $path, [
                 'methods' => 'GET',
                 'permission_callback' => '__RETURN_TRUE',
@@ -134,6 +146,119 @@ namespace KarsonJo\BookPost\Route {
                     return new WP_REST_Response($contents->toJsonArray());
                 }
             ]);
+
+            /**
+             * 更新目录顺序
+             * 只接受层级嵌套的id
+             * 传入顺序就是目录顺序
+             */
+            register_rest_route($namespace, $path, [
+                'methods' => 'PATCH',
+                'permission_callback' => fn ($request) => current_user_can('edit_post', $request['postId']),
+                'callback' => function ($request) {
+                    $hierarchy = $request['hierarchy'];
+                    try {
+                        BookQuery::updateBookHierarchy($hierarchy);
+                    } catch (Exception $e) {
+                        return static::response(null, $e->getMessage(), 400);
+                    }
+                    return static::response(null, __('contents-updated-msg', 'NovelCabinet'));
+                }
+            ]);
+        }
+
+        /**
+         * abstract REST API representation: 
+         * book
+         * @return void 
+         */
+        static function bookRepresentation($namespace, $path = '/posts/(?P<postId>\d+)')
+        {
+            /**
+             * 更新post
+             * 如果指定trashed，其它字段将忽略
+             * trashed: bool
+             * title: string
+             */
+            register_rest_route($namespace, $path, [
+                'methods' => 'PATCH',
+                'permission_callback' => fn ($request) => current_user_can('edit_post', $request['postId']),
+                'callback' => function ($request) {
+                    $postId = intval($request['postId']);
+
+                    /**
+                     * 检测文章是否存在
+                     */
+                    $post = get_post($postId);
+                    if (!$post)
+                        return static::response(null, __('resource-not-found-msg', 'NovelCabinet'), 404);
+
+                    /**
+                     * 指定删除
+                     */
+                    if (isset($request['trashed'])) {
+                        if ($request['trashed'] === true) {
+                            wp_trash_post($postId);
+                            return static::response(null, __('moved-to-trash-msg', 'NovelCabinet'), extraData: ['status' => __(get_post_status($postId), 'NovelCabinet')]);
+                        } else if ($request['trashed'] === false) {
+                            wp_untrash_post($postId);
+                            return static::response(null, __('restored-from-trash-msg', 'NovelCabinet'), extraData: ['status' => get_post_status($postId), 'NovelCabinet']);
+                        } else
+                            return static::response(null, __('invalid-trash-field-msg', 'NovelCabinet'), 422);
+                    }
+
+                    /**
+                     * 更新其它数据
+                     */
+                    // 过滤有效字段
+                    $updated = [];
+                    if ($request['title'])
+                        $updated['post_title'] = $request['title'];
+
+                    // 没有包含任何需要更新的字段
+                    if (count($updated) == 0)
+                        return static::response(null, __('no-valid-fields-msg', 'NovelCabinet'), 422);
+
+                    $updated = ['ID' => $postId];
+                    $result = wp_update_post($updated);
+
+                    // 检测错误
+                    if (is_wp_error($result))
+                        return static::response(null, $result->get_error_message(), 422);
+
+                    // 一般化返回
+                    return static::response(null, __('post-updated-msg', 'NovelCabinet'));
+                }
+            ]);
+
+            /**
+             * permanently delete a post
+             */
+            register_rest_route($namespace, $path, [
+                'methods' => 'DELETE',
+                'permission_callback' => fn ($request) => current_user_can('delete_post', $request['postId']),
+                'callback' => function ($request) {
+                    if (wp_delete_post(intval($request['postId']), true))
+                        return static::response(null, __('successfully-deleted-msg', 'NovelCabinet'));
+                    else
+                        return static::response(null, __('resource-not-found-msg', 'NovelCabinet'), 404);
+                }
+            ]);
+        }
+
+
+        static function response(?string $title = null, ?string $message = null, int $status = 200, array $headers = [], array $extraData = [])
+        {
+            $data = [];
+            if ($title || $message) {
+                if ($title)
+                    $data['title'] = $title;
+                if ($message)
+                    $data['message'] = $message;
+            }
+            $data = array_merge($data, $extraData);
+
+            return new WP_REST_Response($data ?: null, $status, $headers);
         }
     }
 }

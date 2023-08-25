@@ -15,7 +15,7 @@ import { ResponseError } from "./errors.mjs"
 
 import * as bookPost from "@scripts/requests/book-post.mjs"
 import * as theme from "@scripts/requests/theme-novel.mjs"
-import { initBookManager } from "./user/book-manager.mjs";
+import { initBookManager } from "./user/user-booklist.mjs";
 
 
 // =========External Link Warning=========
@@ -133,7 +133,7 @@ function initRating() {
  * utility: 请求一个数据，并把返回的title, message输出出来
  * @param {Promise<any>} task 
  */
-async function doAndNotify(task) {
+export async function doAndNotify(task) {
     try {
         const response = await task
         const cloned = response.clone()

@@ -2,15 +2,14 @@
 
 namespace NovelCabinet\Services\Route\Enums {
     /**
-     * 形如：my.site/user/(xxxx)/
+     * 形如：my.site/user/books/(xxxx)/
      * 键随意，值才是slug
      */
-    enum UserEndpoints: string
+    enum UserBookEndpoints: string
     {
-        case Settings = 'settings';
-        case Main = 'main';
-        case Writing = 'writing';
-        case Books = 'books';
+        case Publish = 'publish';
+        case Future = 'future';
+        case Trash = 'trash';
 
         public static function sigments(): array
         {

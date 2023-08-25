@@ -10,6 +10,7 @@ namespace KarsonJo\BookPost\SqlQuery {
         public const ERROR_UNKNOWN = 0;
         public const ERROR_FIELD_OUT_OF_RANGE = 1;
         public const ERROR_WPDB_EXCEPTION = 2;
+        public const ERROR_FIELD_INVALID = 3;
 
 
         /**
@@ -30,6 +31,12 @@ namespace KarsonJo\BookPost\SqlQuery {
         {
             $message = $message ? $message : 'error when executing $wpdb query';
             return new QueryException(QueryException::ERROR_WPDB_EXCEPTION, $message);
+        }
+
+        public static function fieldInvalid($message = '', Throwable $previous = null)
+        {
+            $message = $message ? $message : 'field invalid';
+            return new QueryException(QueryException::ERROR_FIELD_INVALID, $message, $previous);
         }
     }
 }

@@ -21,6 +21,9 @@ export function showAlert(type, title, message, time = 5000) {
     // style
     removeClassWithPrefix(alert, classPrefix)
     switch (type) {
+        case "info":
+            alert.classList.add(classPrefix + "info")
+            break;
         case "success":
             alert.classList.add(classPrefix + "success")
             break;
@@ -30,6 +33,7 @@ export function showAlert(type, title, message, time = 5000) {
         case "error":
             alert.classList.add(classPrefix + "error")
             break;
+
         default:
             alert.classList.add(classPrefix + "normal")
             break;

@@ -116,9 +116,22 @@ namespace KarsonJo\BookPost\SqlQuery {
          */
         public function published(): BookFilterBuilder
         {
-            $this->where([
-                'post_status' => 'publish',
-            ]);
+            return $this->of_status('publish');
+        }
+
+        /**
+         * 筛选指定状态的书籍
+         * 不要和published一起使用
+         * @param array $status 
+         * @return string|BookFilterBuilder 
+         * @throws Exception 
+         */
+        public function of_status(string|array $status): BookFilterBuilder
+        {
+            if (is_string($status))
+                $this->where(['post_status' => $status]);
+            else if (is_array($status))
+                $this->where(['post_status', 'operator' => 'IN', 'value' => $status]);
             return $this;
         }
 
@@ -127,7 +140,7 @@ namespace KarsonJo\BookPost\SqlQuery {
          */
         public function no_auto_draft(): BookFilterBuilder
         {
-            $this->where( [
+            $this->where([
                 'post_status' => [
                     'operator' => '<>',
                     'value'    => 'auto-draft',
@@ -366,11 +379,10 @@ namespace KarsonJo\BookPost\SqlQuery {
             // return [];
         }
 
-        public function count_unique(string $column = "ID", bool $bypass_limit = true):int
+        public function count_unique(string $column = "ID", bool $bypass_limit = true): int
         {
-            
-            return $this->count("distinct posts.$column",$bypass_limit);
-            
+
+            return $this->count("distinct posts.$column", $bypass_limit);
         }
 
         //==================================================

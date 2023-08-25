@@ -4,6 +4,7 @@ namespace NovelCabinet\Services\Route {
 
     use KarsonJo\Utilities\Route\Router;
     use NovelCabinet\Helpers\WebHelpers;
+    use NovelCabinet\Services\Route\Enums\UserBookEndpoints;
     use NovelCabinet\Services\Route\Enums\UserEndpoints;
 
     /**
@@ -33,7 +34,8 @@ namespace NovelCabinet\Services\Route {
             Router::registerRoute(
                 [
                     '^user/?$',
-                    '^user/(?P<endpoint>' . implode('|', UserEndpoints::sigments()) . ')?/?$'
+                    '^user/(?P<userEndpoint>' . implode('|', UserEndpoints::sigments()) . ')/?$',
+                    // '^user/(?P<userEndpoint>'. UserEndpoints::Books->value .')/(?P<bookEndpoint>'. implode('|', UserBookEndpoints::sigments()) .')/?$',
                 ],
                 locate_template(app('sage.finder')->locate('user')),
                 [

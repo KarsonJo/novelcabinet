@@ -48,7 +48,7 @@ namespace KarsonJo\BookPost {
             if ($public)
                 $status = 'publish';
             else
-                $status = ['draft', 'publish', 'trash', 'future', 'pending', 'private'];
+                $status = null;
 
             $results = BookQuery::bookHierarchy($book, $status);
 
@@ -72,6 +72,23 @@ namespace KarsonJo\BookPost {
 
             $this->setActiveChapter($post);
         }
+
+        // /**
+        //  * 在数据库中按指定顺序更新书本的排序
+        //  * @return void 
+        //  */
+        // public function updateContentsOrder()
+        // {
+        // }
+
+        // protected function getAllBookPosts()
+        // {
+        //     $volumeIds = array_map(fn ($item) => $item->ID, reset($this->contents)); // 卷
+        //     $bookPosts = array_merge($volumeIds, [key($this->contents)]); // 卷 + 书
+        //     foreach ($volumeIds as $volumeId) {
+        //         $bookPosts = array_merge($$bookPosts, array_map(fn ($item) => $item->ID, $this->contents[$volumeId]));
+        //     }
+        // }
 
         /**
          * 目录是否为空
@@ -217,7 +234,7 @@ namespace KarsonJo\BookPost {
                         'title' => $chapter->post_title,
                         'url' => get_permalink($chapter->ID),
                     ];
-                    
+
                 $bookObj['volumes'][] = $volumeObj;
             }
             return $bookObj;

@@ -11,6 +11,7 @@ namespace KarsonJo\BookPost\Route {
         const KBP_QS_FILTER_PAGE = 'page';
         const KBP_QS_FILTER_LIMIT = 'limit';
 
+        const KBP_BOOK_STATUS = 'status';
         /**
          * admin query args
          */
@@ -42,6 +43,7 @@ namespace KarsonJo\BookPost\Route {
                 $vars[] = static::KBP_QS_FILTER_IN_FAVORITE;
                 $vars[] = static::KBP_QS_FILTER_PAGE;
                 $vars[] = static::KBP_QS_FILTER_LIMIT;
+                $vars[] = static::KBP_BOOK_STATUS;
                 // $a+$b: 如有重复，保持原来
                 $vars += static::$args;
                 return $vars;

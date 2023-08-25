@@ -2,6 +2,7 @@
 
 namespace NovelCabinet\Helpers {
 
+    use NovelCabinet\Services\Route\Enums\UserBookEndpoints;
     use NovelCabinet\Services\Route\Enums\UserEndpoints;
 
     class WebHelpers
@@ -15,6 +16,25 @@ namespace NovelCabinet\Helpers {
             if ($subpath instanceof UserEndpoints)
                 $subpath = "/$subpath->value";
             return user_trailingslashit(home_url("/user$subpath"));
+        }
+
+        // public static function getUserBookUrl(string|UserBookEndpoints $subpath = UserBookEndpoints::Publish)
+        // {
+        //     if ($subpath instanceof UserBookEndpoints)
+        //         $subpath = "/$subpath->value";
+        //     if (trailingslashit($subpath) === '/' . UserBookEndpoints::Publish->value)
+        //         $subpath = "/";
+        //     return static::getUserHomeUrl('/' . UserEndpoints::Books->value . $subpath);
+        // }
+
+        /**
+         * 返回当前url， 按设定补斜杠
+         * @return string 
+         */
+        public static function currentUrl(): string
+        {
+            global $wp;
+            return user_trailingslashit(home_url($wp->request));
         }
 
         /**

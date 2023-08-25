@@ -5,6 +5,7 @@ namespace KarsonJo\BookPost\SqlQuery {
     use Exception;
     use KarsonJo\BookPost\BookPost;
     use KarsonJo\Utilities\PostCache\CacheHelpers;
+    use PHP_CodeSniffer\Standards\Squiz\Sniffs\Scope\StaticThisUsageSniff;
     use TenQuality\WP\Database\QueryBuilder;
     use WP_Post;
     use WP_Query;
@@ -119,10 +120,10 @@ namespace KarsonJo\BookPost\SqlQuery {
          * 以层次结构返回一本书的所有文章
          * 包含的字段：爷id，爹id, id, post标题(parent2_id, parent_id, ID, post_title)
          * @param WP_Post|int $book 
-         * @param string[]|string $status 包含的wordpress文章状态
+         * @param string[]|string|null $status 包含的wordpress文章状态
          * @return object[]|false 
          */
-        public static function bookHierarchy(WP_Post|int $book, array|string $status = 'publish'): array|false
+        public static function bookHierarchy(WP_Post|int $book, array|string|null $status = 'publish'): array|false
         {
             if ($book instanceof WP_Post)
                 $book = $book->ID;
@@ -144,15 +145,17 @@ namespace KarsonJo\BookPost\SqlQuery {
                     'raw' => "$book in (p1.post_parent, p2.post_parent)",
                     'p1.post_type' => BookPost::KBP_BOOK,
                 ])
-                ->order_by('parent2_id')
-                ->order_by('parent_id')
+                ->order_by('p2.post_parent')
+                ->order_by('p1.post_parent')
                 ->order_by('p1.menu_order')
                 ->order_by('p1.ID');
 
             if (is_array($status))
                 $query->where(['p1.post_status' => ['operator' => 'IN', 'value' => $status]]);
-            else
+            else if (is_string($status))
                 $query->where(['p1.post_status' => $status]);
+            else
+                $query->where(['p1.post_status' => ['operator' => 'IN', 'value' => ['draft', 'publish', 'trash', 'future', 'pending', 'private']]]);
 
 
             // global $wpdb;
@@ -169,7 +172,7 @@ namespace KarsonJo\BookPost\SqlQuery {
             //             and p1.post_status = %s
             //             and p1.post_type = %s
             // order by    parent2_id, parent_id, p1.menu_order, p1.ID;", $book, $status, BookPost::KBP_BOOK));
-            
+
             $results = $query->get();
 
             if (!$results)
@@ -487,6 +490,159 @@ namespace KarsonJo\BookPost\SqlQuery {
             if (empty($result))
                 return 0;
             return intval($result);
+        }
+
+        public static function setPostMenuOrder(array $IdOrderPairs): int
+        {
+            if (!count($IdOrderPairs))
+                return 0;
+
+            global $wpdb;
+
+            $when = '';
+            foreach ($IdOrderPairs as $id => $value) {
+                $when .= $wpdb->prepare('WHEN ID=%d THEN %d ', $id, $value);
+            }
+
+            $in = implode(",", array_filter(array_keys($IdOrderPairs), fn ($item) => is_numeric($item)));
+
+            $order_sql = "UPDATE {$wpdb->prefix}posts
+                    SET menu_order = 
+                    CASE
+                    $when
+                    END
+                    WHERE ID in ($in);";
+
+
+
+            $result = $wpdb->query($order_sql);
+
+            static::assertWpdbResult($result);
+            return intval($result);
+        }
+
+        /**
+         * 书结点有：{id:int , volumes:[{volume1}, {volume2}, ...]}
+         * 卷结点有：{id:int , ?chapters:[{chapter1}, {chapter2}, ...]}
+         * 章结点有：{id:int}
+         * @param array $bookHierarchy 
+         * @return int 
+         * @throws Exception 
+         */
+        public static function updateBookHierarchy(array $bookHierarchy): int
+        {
+            /**
+             * 确保：
+             * 1. 所有id均存在，且为数字，清除id不符合的项
+             * 2. book至少有1个volume，
+             * 3. volume可以不包含chapter
+             */
+            if (!array_key_exists('id', $bookHierarchy) || !is_numeric($bookHierarchy['id']) || empty($bookHierarchy['volumes']))
+                return 0;
+
+
+            // 清除无效volume
+
+            foreach ($bookHierarchy['volumes'] as $vkey => $volume) {
+                if (!array_key_exists('id', $volume) || !is_numeric($volume['id']))
+                    unset($bookHierarchy['volumes'][$vkey]);
+                else if (array_key_exists('chapters', $volume)) {
+                    // 清除无效chapter
+                    foreach ($volume['chapters'] as $ckey => $chapter) {
+                        if (!array_key_exists('id', $chapter) || !is_numeric($chapter['id']))
+                            unset($volume['chapters'][$ckey]);
+                    }
+                }
+            }
+
+
+            /**
+             * 准备更新parent、order的数据
+             */
+
+            /**
+             * idPairs: post-id => order
+             */
+            $idPairs = [];
+            $query = QueryBuilder::create()->from('posts as posts');
+
+            $bookId = $bookHierarchy['id'];
+
+
+            // 决定volume的顺序
+            $volumes = $bookHierarchy['volumes'];
+            $volumeIds = array_column($volumes, 'id');
+            $idPairs += array_flip($volumeIds);
+
+
+            // （顺便组织SQL）更新卷的parent
+            $parent_when = [];
+            if (!empty($volumeIds))
+                $parent_when[] = "WHEN ID in (" . implode(",", $volumeIds) . ") THEN " . intval($bookId);
+
+            foreach ($volumes as $volume) {
+                if (empty($volume['chapters']))
+                    continue;
+
+                // 决定chapter的顺序
+                $chapterIds = array_column($volume['chapters'], 'id');
+                $idPairs += array_flip($chapterIds);
+
+
+                // （顺便组织SQL）更新章的parent
+                $parent_when[] = "WHEN ID in (" . implode(',', $chapterIds) . ") THEN " . intval($volume['id']);
+            }
+
+
+            // 确定项来自这本书
+            // 当作set用
+            $bookPostIds = array_flip(array_map(fn ($item) => $item->ID, static::bookHierarchy($bookId, null)));
+            foreach ($idPairs as $id => $order)
+                if (!array_key_exists($id, $bookPostIds))
+                    throw QueryException::fieldInvalid();
+
+
+
+            // $idPairs = array_filter($idPairs, fn ($id) => array_key_exists($id, $bookPostIds), ARRAY_FILTER_USE_KEY);
+            if (count($idPairs) === 0)
+                return 0;
+
+            // 压成负数（因为新建文章默认序列为0，应该是最新章节）
+            $max = max($idPairs) + 1;
+            foreach ($idPairs as &$idPair)
+                $idPair -= $max;
+
+                
+            /**
+             * 拼接SQL
+             */
+            if (count($parent_when))
+                $query->set(['raw' => "posts.post_parent = CASE " . implode(' ', $parent_when) . " ELSE posts.post_parent END"]);
+
+            global $wpdb;
+            $when = '';
+            foreach ($idPairs as $id => $value)
+                $when .= $wpdb->prepare('WHEN ID=%d THEN %d ', $id, $value);
+
+            $query->set(['raw' => "posts.menu_order = CASE $when ELSE posts.menu_order END"]);
+
+            $query->where(['posts.ID' => ['operator' => 'IN', 'value' => array_filter(array_keys($idPairs), fn ($item) => is_numeric($item))]]);
+
+            return $query->update();
+
+
+            // QueryBuilder::create()
+            // ->from('posts as posts')
+            // ->set(['raw' => "WHEN ID in (" . implode(",", $volumeIds) . ") THEN $bookId"])
+            // ->set(['raw' => "WHEN ID in (" . implode(",", $chapterIds) . ") THEN $volumeId"])
+            // ->where(['posts.ID' => ['operator' => 'IN', 'value' => ???]])
+            // ->update();
+            // // volume
+            // $volume_sql = "WHEN ID in (" . implode(",", $volumeIds) . ") THEN $bookId";
+
+            // // chapter
+            // $volume_sql = "WHEN ID in (" . implode(",", $chapterIds) . ") THEN $volumeId";
+            // $parent_sql = "post_parent = CASE $volume_sql END"
         }
     }
 }

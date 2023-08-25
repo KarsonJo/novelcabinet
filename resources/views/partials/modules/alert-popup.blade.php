@@ -1,4 +1,4 @@
-<div class="tag.alert-list fixed inset-0 top-20 flex items-center flex-col gap-1 pointer-events-none">
+<div class="tag.alert-list fixed inset-0 top-20 flex items-center flex-col gap-1 pointer-events-none z-50">
     {{-- @foreach (['normal', 'info', 'success', 'warning', 'error'] as $item) --}}
     <section class="tag.alert-popup relative border border-current backdrop-blur-md min-w-[min(80%,16rem)] max-w-[32rem] mx-16 px-8 py-2 rounded-lg shadow-lg transition-opacity duration-1000
     [&.style-normal]:text-theme-bg1 [&.style-info]:text-blue-300 [&.style-success]:text-green-300 [&.style-warning]:text-orange-200 [&.style-error]:text-red-300 style-normal group hidden not-show:opacity-0">
