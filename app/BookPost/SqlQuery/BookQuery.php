@@ -543,7 +543,7 @@ namespace KarsonJo\BookPost\SqlQuery {
 
             // 清除无效volume
 
-            foreach ($bookHierarchy['volumes'] as $vkey => $volume) {
+            foreach ($bookHierarchy['volumes'] as $vkey => &$volume) {
                 if (!array_key_exists('id', $volume) || !is_numeric($volume['id']))
                     unset($bookHierarchy['volumes'][$vkey]);
                 else if (array_key_exists('chapters', $volume)) {
@@ -554,7 +554,7 @@ namespace KarsonJo\BookPost\SqlQuery {
                     }
                 }
             }
-
+            unset($volume);
 
             /**
              * 准备更新parent、order的数据
