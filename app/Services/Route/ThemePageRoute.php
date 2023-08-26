@@ -6,6 +6,7 @@ namespace NovelCabinet\Services\Route {
     use NovelCabinet\Helpers\WebHelpers;
     use NovelCabinet\Services\Route\Enums\UserBookEndpoints;
     use NovelCabinet\Services\Route\Enums\UserEndpoints;
+    use NovelCabinet\Services\Route\Enums\ThemePageRouteNames;
 
     /**
      * 每次载入前调用
@@ -27,7 +28,8 @@ namespace NovelCabinet\Services\Route {
             // https://my.site/bookfinder/
             Router::registerRoute(
                 '^bookfinder/?$',
-                locate_template(app('sage.finder')->locate('book-finder'))
+                locate_template(app('sage.finder')->locate('book-finder')),
+                name: ThemePageRouteNames::BookFinder
             );
 
             // https://my.site/user/(xxxx)/
@@ -35,33 +37,36 @@ namespace NovelCabinet\Services\Route {
                 [
                     '^user/?$',
                     '^user/(?P<userEndpoint>' . implode('|', UserEndpoints::sigments()) . ')/?$',
-                    // '^user/(?P<userEndpoint>'. UserEndpoints::Books->value .')/(?P<bookEndpoint>'. implode('|', UserBookEndpoints::sigments()) .')/?$',
                 ],
                 locate_template(app('sage.finder')->locate('user')),
                 [
                     fn () => !is_user_logged_in() && wp_redirect(WebHelpers::getUserLoginUrl(), 302),
                     fn () => Router::atPath('^user/?$') && wp_redirect(WebHelpers::getUserHomeUrl(UserEndpoints::Settings), 301),
-                ]
+                ],
+                name: ThemePageRouteNames::UserDashboard
             );
+
             // https://my.site/login/
             Router::registerRoute(
                 '^login/?$',
                 locate_template(app('sage.finder')->locate('login')),
-                fn () => is_user_logged_in() && wp_redirect(WebHelpers::getUserHomeUrl(), 302)
+                fn () => is_user_logged_in() && wp_redirect(WebHelpers::getUserHomeUrl(), 302),
+                name: ThemePageRouteNames::Login
             );
+
             // https://my.site/external-redirect
             Router::registerRoute(
                 '^external-redirect/?$',
                 locate_template(app('sage.finder')->locate('external-redirect')),
-                // fn () => is_user_logged_in() && wp_redirect(WebHelpers::getUserHomeUrl()) and exit
+                name: ThemePageRouteNames::ExternalRedirect
             );
+
             // https://my.site/date/1970/01/01
-            Router::registerRoute(
-                '^date/(?P<year>\d{4})/(?P<month>\d{2})/(?P<day>\d{2})/?$',
-                locate_template(app('sage.finder')->locate('login')),
-                // fn () => is_user_logged_in() && wp_redirect(WebHelpers::getUserHomeUrl()) and exit
-            );
-            Router::init();
+            // Router::registerRoute(
+            //     '^date/(?P<year>\d{4})/(?P<month>\d{2})/(?P<day>\d{2})/?$',
+            //     locate_template(app('sage.finder')->locate('login')),
+            // );
+            // Router::init();
         }
 
         private static function initRedirects()

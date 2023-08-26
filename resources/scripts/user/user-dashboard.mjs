@@ -1,5 +1,7 @@
+import domReady from "@roots/sage/client/dom-ready";
 import * as utils from "@scripts/dom-utils.mjs"
 import * as novel from "@scripts/requests/theme-novel.mjs"
+import { initBookManager } from "./user-booklist.mjs";
 
 function getDashboardContent(el) {
     return (el??document).querySelector(".tag-dashboard-content");
@@ -160,4 +162,13 @@ export function initUserDashboard() {
     // initUserMenuSwiper()
     initDashboardMenu();
     initProfileSettings();
+
+    // book list
+    initBookManager();
 }
+
+
+domReady(async () => {
+    // ...
+    initUserDashboard();
+});

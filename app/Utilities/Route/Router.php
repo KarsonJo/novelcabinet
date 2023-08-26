@@ -1,6 +1,9 @@
 <?php
 
 namespace KarsonJo\Utilities\Route {
+
+    use UnitEnum;
+
     /**
      * 页面路由
      */
@@ -12,6 +15,11 @@ namespace KarsonJo\Utilities\Route {
         protected static ?string $activePath = null;
 
         /**
+         * 当前活跃的路由名称，若无指定名称，将是路由的路径
+         * @var string
+         */
+        public static UnitEnum|string|null $activeName = null;
+        /**
          * 活跃路由的参数
          */
         public static ?array $data = null;
@@ -22,7 +30,7 @@ namespace KarsonJo\Utilities\Route {
          * @param string $template 加载的blade or php文件
          * @param ?callable|callable[] $redirects 可选的重定向逻辑，在该路由生效时在template_redirect触发，传入的重定向函数只需返回布尔值，不必退出
          */
-        public static function registerRoute(string|iterable $routePaths, string $template, null|callable|iterable $redirects = null)
+        public static function registerRoute(string|iterable $routePaths, string $template, null|callable|iterable $redirects = null, UnitEnum|string|null $name = null)
         {
             if (!$routePaths)
                 return;
@@ -38,11 +46,11 @@ namespace KarsonJo\Utilities\Route {
              * 匹配url并设置标记变量，使用最早能够获得url的钩子：
              * https://wordpress.stackexchange.com/questions/317760/how-do-i-know-if-a-rewritten-rule-was-applied
              */
-            add_action('parse_request', function ($wp) use ($routePaths, $template, $redirects) {
+            add_action('parse_request', function ($wp) use ($routePaths, $template, $redirects, $name) {
                 foreach ($routePaths as $routePath)
                     if (preg_match("<$routePath>", $wp->request, $matches)) {
                         // Router::setActivePath($routePath);
-                        Router::setActiveRoute($routePath, $template, $redirects);
+                        Router::setActiveRoute($routePath, $template, $redirects, $name);
                         Router::$data = Router::filterMatches($matches);
                         break;
                     }
@@ -55,9 +63,10 @@ namespace KarsonJo\Utilities\Route {
             add_action('after_switch_theme', 'flush_rewrite_rules');
         }
 
-        protected static function setActiveRoute(string $routePath, string $template, null|callable|iterable $redirects = null)
+        protected static function setActiveRoute(string $routePath, string $template, null|callable|iterable $redirects = null, UnitEnum|string|null $name = null)
         {
             Router::$activePath = $routePath;
+            Router::$activeName = $name ?: $routePath;
 
             /**
              * 更改页面模板
@@ -94,9 +103,14 @@ namespace KarsonJo\Utilities\Route {
         }
 
         // 下面的函数没用到，但你可能需要这些函数做一些控制
-        public static function atPath($path): bool
+        public static function atPath(string $path): bool
         {
             return !is_404() && Router::$activePath === $path;
+        }
+
+        public static function isName(UnitEnum|string $name): bool
+        {
+            return !is_404() && Router::$activeName === $name;
         }
 
         public static function atAnyPath(): bool

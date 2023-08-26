@@ -2,6 +2,10 @@
 
 namespace NovelCabinet;
 
+use function Roots\bundle;
+use KarsonJo\Utilities\Route\Router;
+use NovelCabinet\Services\Route\Enums\ThemePageRouteNames;
+
 use function NovelCabinet\Utility\enqueue_script_data;
 
 /**
@@ -17,6 +21,15 @@ add_action('wp_enqueue_scripts', function () {
     // wp_enqueue_script('font-awesome-defer', 'https://site-assets.fontawesome.com/releases/v6.4.2/js/all.js', null, null);
     // wp_enqueue_style('font-awesome-defer', 'https://site-assets.fontawesome.com/releases/v6.4.2/css/all.css', null, null);
     // wp_register_script('jquery', 'https://cdn.jsdelivr.net/npm/jquery@3.6.1/dist/jquery.min.js');
+
+    if (is_home())
+        bundle('index')->enqueue();
+        else if (Router::isName(ThemePageRouteNames::UserDashboard))
+        bundle('dashboard')->enqueue();
+    else if (Router::isName(ThemePageRouteNames::BookFinder))
+        bundle('bookfinder')->enqueue();
+    else if (Router::isName(ThemePageRouteNames::Login))
+        bundle('login')->enqueue();
 });
 
 /**
@@ -47,10 +60,10 @@ add_action('wp_enqueue_scripts', function () {
 /**
  * 移除global-styles-inline-css
  */
- add_action( 'init', function () {
-    remove_action( 'wp_enqueue_scripts', 'wp_enqueue_global_styles' );
-    remove_action( 'wp_body_open', 'wp_global_styles_render_svg_filters' );
- } );
+add_action('init', function () {
+    remove_action('wp_enqueue_scripts', 'wp_enqueue_global_styles');
+    remove_action('wp_body_open', 'wp_global_styles_render_svg_filters');
+});
 
- // 关闭 url guessing
-add_filter( 'do_redirect_guess_404_permalink', '__return_false' );
+// 关闭 url guessing
+add_filter('do_redirect_guess_404_permalink', '__return_false');

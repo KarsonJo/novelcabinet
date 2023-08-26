@@ -1,4 +1,4 @@
-import { ResponseError } from "@scripts/errors.mjs"
+// import { ResponseError } from "@scripts/errors.mjs"
 import { basicHeader, restDomain } from "./rest-utility.mjs"
 
 const namespace = restDomain("kbp", "v1")

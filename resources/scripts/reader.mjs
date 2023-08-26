@@ -1,3 +1,4 @@
+import domReady from "@roots/sage/client/dom-ready";
 import * as domUtils from "./dom-utils.mjs"
 
 // =========Reader Settings=========
@@ -109,7 +110,50 @@ function initThemeButtons() {
     registerBtn(getDarkButton(), "dark");
 }
 
-export function initReaderSettings() {
+
+
+function readerSectionHighlight() {
+    // let articles = document.querySelectorAll('article[class*="r-art-"]')
+    let articles = document.querySelectorAll('article[data-art-id]')
+    let inWindow = new Set()
+
+    let callback = (entries) => {
+        entries.forEach((entry) => {
+            // 更新可见性记录
+            if (entry.intersectionRatio > 0)
+                inWindow.add(entry.target)
+            else
+                inWindow.delete(entry.target)
+        })
+
+        // 得到最顶可见元素
+        let selected;
+        for (let target of inWindow) {
+            if (!selected || target.getBoundingClientRect().top < selected.getBoundingClientRect().top)
+                selected = target;
+        }
+
+        // console.log(selected);
+
+        // 修改导航标题为selected元素
+        let title = selected?.querySelector(".chapter-title");
+
+        document.querySelectorAll(".tag\\.pc-chpt").forEach(el => {
+            el.textContent = title ? title.textContent : ""
+        })
+
+        //todo: 删除旧的
+        document.querySelectorAll('.selected[data-cont-id]').forEach(el => el.classList.remove("selected"))
+        document.querySelectorAll(`[data-cont-id="${selected.dataset.artId}"]`).forEach(el => el.classList.add("selected"))
+        // console.log(title?.textContent)
+    }
+    let ob = new IntersectionObserver(callback, {})
+    articles.forEach(x => ob.observe(x))
+}
+
+
+
+function initReaderSettings() {
     initThemeButtons()
 
     document.querySelector(".r-text-slider")?.addEventListener("input", function () {
@@ -128,3 +172,19 @@ export function initReaderSettings() {
 
     readDefaultSettings()
 }
+
+
+domReady(async () => {
+    initReaderSettings();
+    readerSectionHighlight();
+
+    // page reader
+    document.querySelectorAll(".r-contents-toggle")?.forEach((res) => res.addEventListener("click", () => {
+        document.querySelector(".tag\\.contents").classList.toggle('opened')
+        document.documentElement.classList.toggle('overflow-hidden')
+    }))
+    document.querySelectorAll(".r-settings-toggle")?.forEach((res) => res.addEventListener("click", () =>
+        document.querySelector(".tag\\.reader-settings").classList.toggle('opened')
+    ))
+});
+

@@ -6,6 +6,8 @@ use Roots\Acorn\View\Composer;
 use KarsonJo\BookPost;
 use KarsonJo\BookPost\BookContents;
 
+use function Roots\bundle;
+
 class BookChapter extends Composer
 {
     /**
@@ -25,6 +27,8 @@ class BookChapter extends Composer
     public function override()
     {
         wp_enqueue_style('reader-themes', get_template_directory_uri() . '/resources/styles/reader-themes.css');
+        bundle('reader')->enqueue();
+
 
         $book = get_post();
         $contents = new BookContents($book);

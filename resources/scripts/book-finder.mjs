@@ -1,3 +1,4 @@
+import domReady from "@roots/sage/client/dom-ready"
 import { asIterable } from "./dom-utils.mjs"
 
 // ==================== utility ====================
@@ -314,3 +315,8 @@ export function initBookFinder() {
     updateButtonStyleFromUrl()
     updateContentIndicator()
 }
+
+domReady(async () => {
+    // ...
+    initBookFinder();
+});

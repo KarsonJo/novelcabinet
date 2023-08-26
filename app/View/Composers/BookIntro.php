@@ -7,6 +7,7 @@ use KarsonJo\BookPost;
 use KarsonJo\BookPost\Book;
 use KarsonJo\BookPost\SqlQuery\BookQuery;
 
+use function Roots\bundle;
 
 class BookIntro extends Composer
 {
@@ -26,8 +27,11 @@ class BookIntro extends Composer
      */
     public function override()
     {
+        bundle('bookIntro')->enqueue();
+
         // global $post;
         $post = get_post();
+
         // $volumes = BookPost\get_book_volume_chapters($book->ID);
 
         // if (array_key_exists(0, $volumes) && array_key_exists(1, $volumes[0]))

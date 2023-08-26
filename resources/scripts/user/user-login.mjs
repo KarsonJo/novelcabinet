@@ -1,3 +1,4 @@
+import domReady from "@roots/sage/client/dom-ready"
 import * as novel from "@scripts/requests/theme-novel.mjs"
 
 function loginListener() {
@@ -49,6 +50,6 @@ function loginListener() {
 }
 
 
-export function initUserUtilities() {
+domReady(async () => {
     loginListener()
-}
+});

@@ -1,33 +1,9 @@
 <?php
 
-// namespace KarsonJo\BookPost\RESTAPI {
-//     /**
-//      * 加入用于api的JavaScript数据
-//      */
-//     add_action('wp_enqueue_scripts', function () {
-//         wp_enqueue_script('wp-api');
-//         wp_localize_script('wp-api', 'wpApiSettings', [
-//             'root' => esc_url_raw(rest_url()),
-//             'nonce' => wp_create_nonce('wp_rest')
-//         ]);
-//     });
-// }
-
-
-namespace KarsonJo\BookPost\RESTAPI {
-
-    
-}
-
 namespace NovelCabinet\Services\Route {
-    const API_DOMAIN = 'knc';
-    const API_VERSION = 'v1';
-    const API_NAMESPACE = API_DOMAIN . '/' . API_VERSION;
 
     use NovelCabinet\Helpers\WebHelpers;
-
     use WP_REST_Response;
-
     use function NovelCabinet\User\validate_gender;
     use function NovelCabinet\Utility\validate_date;
 
@@ -37,7 +13,7 @@ namespace NovelCabinet\Services\Route {
         {
             $namespace = $apiDomain . '/' . $apiVersion;
 
-            add_action('rest_api_init', function() use($namespace){
+            add_action('rest_api_init', function () use ($namespace) {
                 static::loginAPI($namespace);
                 static::updateUserDataAPI($namespace);
             });

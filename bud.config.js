@@ -22,6 +22,12 @@ export default async (app) => {
     .entry({
       app: ['@scripts/app', '@styles/app'],
       editor: ['@scripts/editor', '@styles/editor'],
+      index: ['@scripts/index'],
+      reader: ['@scripts/reader'],
+      dashboard: ['@scripts/user/user-dashboard'],
+      bookfinder: ['@scripts/book-finder'],
+      login: ['@scripts/user/user-login'],
+      bookIntro: ['@scripts/book-intro'],
     })
 
     /**
