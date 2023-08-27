@@ -50,9 +50,14 @@ namespace KarsonJo\BookPost\Route {
             });
         }
 
+        public static function contains(string $key): bool
+        {
+            return get_query_var($key, false);
+        }
+
         public static function getAdminQueryArg(string $key, $default = ''): string
         {
-            return filter_input(INPUT_GET, $key, FILTER_SANITIZE_ENCODED)?:$default;
+            return filter_input(INPUT_GET, $key, FILTER_SANITIZE_ENCODED) ?: $default;
         }
 
 
@@ -133,16 +138,6 @@ namespace KarsonJo\BookPost\Route {
             if ($var == 'desc')
                 return 2;
             return 0;
-        }
-
-        /**
-         * 是否设置了post_parent查询字符串
-         * 如果没有，返回0
-         * @return int 
-         */
-        public static function postParent(): int
-        {
-            return static::getPositiveNumber(static::POST_PARENT);
         }
 
         /**

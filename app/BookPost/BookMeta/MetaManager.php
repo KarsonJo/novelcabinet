@@ -61,29 +61,29 @@ namespace KarsonJo\BookPost\BookMeta {
          * 支持新建文章时使用"post_parent"查询字符串指定父亲
          * @return void 
          */
-        static function newPostWithParent($data, $postarr)
-        {
-            // 不是新文章 或 不是书， 不关我事
-            if ($postarr['post_type'] != BookPost::KBP_BOOK || !empty($postarr['ID']))
-                return $data;
+        // static function newPostWithParent($data, $postarr)
+        // {
+        //     // 不是新文章 或 不是书， 不关我事
+        //     if ($postarr['post_type'] != BookPost::KBP_BOOK || !empty($postarr['ID']))
+        //         return $data;
 
-            // 没设置，也不关我事
-            $parent_id = QueryData::getAdminQueryArg(QueryData::POST_PARENT);
-            if (empty($parent_id) || !is_numeric($parent_id))
-                return $data;
+        //     // 没设置，也不关我事
+        //     $parent_id = QueryData::getAdminQueryArg(QueryData::POST_PARENT);
+        //     if (empty($parent_id) || !is_numeric($parent_id))
+        //         return $data;
 
-            // 用户无权编辑父文章，驳回
-            if (!current_user_can('edit_post', $parent_id))
-                return $data;
+        //     // 用户无权编辑父文章，驳回
+        //     if (!current_user_can('edit_post', $parent_id))
+        //         return $data;
 
-            // 父文章与当前文章不是同一类型，也不执行
-            if (get_post($parent_id)->post_type != $postarr['post_type'])
-                return $data;
+        //     // 父文章与当前文章不是同一类型，也不执行
+        //     if (get_post($parent_id)->post_type != $postarr['post_type'])
+        //         return $data;
 
-            // 满足所有条件，设置父亲
-            $data->post_parent = $parent_id;
-            return $data;
-        }
+        //     // 满足所有条件，设置父亲
+        //     $data->post_parent = $parent_id;
+        //     return $data;
+        // }
 
         /**
          * 支持新建文章时使用"chapter_of"指定文章为该书的新章节
