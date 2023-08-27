@@ -48,7 +48,7 @@ namespace KarsonJo\BookPost {
                 'menu_icon'             => 'dashicons-book',
                 'supports'              => array('title', 'editor', 'thumbnail', 'page-attributes'),
                 'taxonomies'            => array(),
-                'hierarchical'          => true,
+                'hierarchical'          => false,
                 'has_archive'           => true,
                 'rewrite'               => array('slug' => static::KBP_BOOK_SLUG, 'with_front' => false),
                 'query_var'             => true,
