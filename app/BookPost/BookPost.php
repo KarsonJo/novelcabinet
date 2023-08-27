@@ -182,18 +182,22 @@ namespace KarsonJo\BookPost {
              * 如果没查，该函数直接操办它的仪式，因此任何情况下都不需要主查询
              */
             add_filter('posts_pre_query', function ($posts, $query) {
-                if ($query->is_main_query()) {
+                if ($query->is_main_query() && !is_admin()) {
                     // 不是，WordPress会对404进行主查询，有病病？？
                     if ($query->is_404())
                         return [];
                     // 阻断对单个book_post的查询
                     else if ($query->get('post_type') === static::KBP_BOOK/* && $query->is_singular() */) {
+                        $p = $query->get('p', false);
                         // 设置了id
-                        if (!empty($query->get('p')))
-                            return [get_post($query->get('p'))];
-                        // 但是无效（其实这个在上一步is_404已经排掉，保险起见吧）
-                        else if ($query->get('p') <= 0)
-                            return [];
+                        if ($p != false && is_numeric($p)) {
+                            $p = intval($p);
+                            if (!$p)
+                                return [get_post($p)];
+                            // 但是无效（其实这个在上一步is_404已经排掉，保险起见吧）
+                            else if ($p <= 0)
+                                return [];
+                        }
                     }
                 }
                 return $posts;
