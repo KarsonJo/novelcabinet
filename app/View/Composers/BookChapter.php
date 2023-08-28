@@ -5,6 +5,7 @@ namespace App\View\Composers;
 use Roots\Acorn\View\Composer;
 use KarsonJo\BookPost;
 use KarsonJo\BookPost\BookContents;
+use KarsonJo\BookPost\SqlQuery\BookQuery;
 
 use function Roots\bundle;
 
@@ -30,7 +31,8 @@ class BookChapter extends Composer
         bundle('reader')->enqueue();
 
 
-        $book = get_post();
+        $chapter = get_post();
+        $book = BookQuery::rootPost($chapter);
         $contents = new BookContents($book);
         $prev_chapter = $contents->previousChapter();
         $next_chapter = $contents->nextChapter();
@@ -40,7 +42,7 @@ class BookChapter extends Composer
             'bookName' => $book->post_title,
             'authorUrl' => get_author_posts_url($book->post_author),
             'author' => get_the_author_meta('display_name', $book->post_author),
-            'postDateTime' => $book->post_date,
+            'postDateTime' => $chapter->post_date,
             'preChapterUrl' => $prev_chapter ? get_permalink($prev_chapter->ID) : "#",
             'nextChapterUrl' => $next_chapter ? get_permalink($next_chapter->ID) : "#",
         ];

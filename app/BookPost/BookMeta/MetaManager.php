@@ -13,7 +13,7 @@ namespace KarsonJo\BookPost\BookMeta {
         public static function init()
         {
             add_filter('wp_insert_post_data', [__CLASS__, 'preventUpdatingModifiedDate'], 1, 2);
-            add_filter('wp_insert_post_data', [__CLASS__, 'newPostWithParent'], 1, 2);
+            // add_filter('wp_insert_post_data', [__CLASS__, 'newPostWithParent'], 1, 2);
             add_filter('wp_insert_post_data', [__CLASS__, 'newBookChapter'], 1, 2);
             // add_filter('save_post_' . BookPost::KBP_BOOK, [__CLASS__, 'newBookChapter'], 1, 2);
 
