@@ -98,11 +98,17 @@ namespace NovelCabinet\Services\Route {
 
             // 子书籍返回404如果父书籍被设置为私有或草稿
             add_filter('pre_handle_404', function ($_, $wp_query) {
-                if (empty($wp_query->post))
+                // print_r(1);
+                if (empty($wp_query->post) || is_admin())
                     return false;
+                // print_r(1);
+
                 $ancestor_id = last(get_post_ancestors($wp_query->post->ID));
+                // print_r(get_post($ancestor_id));
+                // print_r(wp_get_current_user()->roles);
                 // 是子文章，且无权访问爷/爹
-                if ($ancestor_id && !current_user_can('read_post', $ancestor_id)) {
+                if ($ancestor_id && !is_post_publicly_viewable($ancestor_id) && !current_user_can('read_post', $ancestor_id)) {
+
                     //清空文章
                     $wp_query->posts = [];
                     unset($wp_query->post);
