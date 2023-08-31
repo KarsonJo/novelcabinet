@@ -112,7 +112,7 @@
                                         <a href="{!! wp_nonce_url(add_query_arg(['action' => 'untrash', 'post' => $book->ID], admin_url('post.php')),"untrash-post_$book->ID") !!}" class="tag-untrash-btn cursor-pointer flex items-center justify-center h-full aspect-square btn-style1-green">
                                             <i class="fa-light fa-trash-undo"></i>
                                         </a>
-                                        <a href="{!! get_delete_post_link($book->ID, true) !!}" class="tag-delete-btn cursor-pointer flex items-center justify-center h-full aspect-square btn-style2-rose">
+                                        <a href="{!! get_delete_post_link($book->ID, '', true) !!}" class="tag-delete-btn cursor-pointer flex items-center justify-center h-full aspect-square btn-style2-rose">
                                             <i class="fa-light fa-trash-slash"></i>
                                         </a>
                                     @else
