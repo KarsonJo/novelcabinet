@@ -23,8 +23,9 @@ namespace KarsonJo\BookPost\Route {
                 static::updatePostFavorite($namespace);
                 static::getBookContentsJson($namespace);
 
-                static::bookRepresentation($namespace);
+                static::postRepresentation($namespace);
             });
+            BookRoute::init();
         }
 
         static function bookRating($namespace, $path = '/rate/(?P<postId>\d+)')
@@ -168,11 +169,11 @@ namespace KarsonJo\BookPost\Route {
         }
 
         /**
-         * abstract REST API representation: 
-         * book
+         * REST API representation: 
+         * post
          * @return void 
          */
-        static function bookRepresentation($namespace, $path = '/posts/(?P<postId>\d+)')
+        static function postRepresentation($namespace, $path = '/posts/(?P<postId>\d+)')
         {
             /**
              * 更新post
@@ -241,7 +242,7 @@ namespace KarsonJo\BookPost\Route {
                     if (wp_delete_post(intval($request['postId']), true))
                         return static::response(null, __('successfully-deleted-msg', 'NovelCabinet'));
                     else
-                        return static::response(null, __('resource-not-found-msg', 'NovelCabinet'), 404);
+                        return static::response(null, __('delete-failed-msg', 'NovelCabinet'), 400);
                 }
             ]);
         }
