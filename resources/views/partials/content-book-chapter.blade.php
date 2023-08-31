@@ -1,6 +1,6 @@
 <div class="tag.bg absolute bg-reader-bg inset-0 -z-50"></div>
-<div class="text-sm sm:pb-12 sm:text-base w-fit mx-auto">
-    <section class="select-none w-fit max-sm:p-1 sm:px-4"> {{-- <<- fit content for padding --}}
+<div class="flex text-sm sm:pb-12 sm:text-base">
+    <section class="select-none grow mx-auto max-w-4xl max-sm:p-1 sm:px-4"> {{-- <<- fit content for padding --}}
         {{-- Nav bar --}}
         <nav class="tag.menu bg-reader-paper shadow-sm fixed bottom-0 left-0 right-0 border-opacity-10 border-y border-y-black
         sm:sticky sm:top-0">
@@ -72,7 +72,7 @@
         </article>
         <div class="h-screen"></div> --}}
 
-        <article class="text-[1em] tag.book-reader prose max-w-4xl p-8 bg-reader-paper shadow-md sm:p-[clamp(4rem,10%,7rem)]" data-art-id={{ get_the_ID() }}>
+        <article class="text-[1em] tag.book-reader prose p-8 bg-reader-paper shadow-md sm:p-[clamp(4rem,10%,7rem)]" data-art-id={{ get_the_ID() }}>
             <div class="tag.chapter-meta pb-2 mb-4 border-b border-b-quaternary border-opacity-25">
                 <h1 class="chapter-title">{{ the_title() }}</h1>
                 <div class="not-prose text-quaternary text-[0.875em] leading-[1.25em] flex gap-3 flex-wrap">
