@@ -3,7 +3,10 @@
 namespace KarsonJo\BookPost {
 
     use DateTime;
+    use KarsonJo\BookPost\SqlQuery\AuthorQuery;
     use KarsonJo\BookPost\SqlQuery\BookFilterBuilder;
+    use KarsonJo\BookPost\SqlQuery\BookQuery;
+    use TenQuality\WP\Database\QueryBuilder;
     use WP_Post;
 
     class Book
@@ -20,13 +23,18 @@ namespace KarsonJo\BookPost {
 
         public string $title;
         public string $author;
+        public string $authorId;
+        public string $authorLogin;
         public string $excerpt;
         public ?DateTime $updateTime;
         public string $status;
+
         /**
          * Book类型的Genre Taxonomy
+         * @var \WP_Term[]
          */
         public array $genres;
+        public array $tags;
 
         public float $rating;
         /**
@@ -49,11 +57,12 @@ namespace KarsonJo\BookPost {
         {
             if ($id instanceof WP_Post)
                 $id = $id->ID;
-            $book = BookFilterBuilder::create(null, false)->of_id($id)->get_as_book();
-            if (!$book)
-                return null;
+            return BookQuery::getBook(['ID' => $id]);
+            // $book = BookFilterBuilder::create(null, false)->of_id($id)->get_as_book();
+            // if (!$book)
+            //     return null;
 
-            return $book[0];
+            // return $book[0];
         }
 
         public static function initBookFromArray(array $params): ?Book
@@ -73,9 +82,11 @@ namespace KarsonJo\BookPost {
             $book->wordCount = $params['word_count'] ?? 0;
             $book->status = $params['post_status'] ?? '';
 
-            if (isset($params['post_author']))
-                $book->author = get_the_author_meta('display_name', $params['post_author']);
-
+            if (isset($params['post_author'])) {
+                $book->authorId = $params['post_author'];
+                $book->author = AuthorQuery::getAuthorDisplayName($book->authorId);
+                $book->authorLogin = AuthorQuery::getAuthorUserName($book->authorId);
+            }
             // 获取额外信息
             // $book->permalink = get_permalink($_post);
             $book->permalink = get_post_permalink($book->ID);
@@ -84,7 +95,9 @@ namespace KarsonJo\BookPost {
             $book->cover = is_array($images) ? $images[0] : "";
 
 
-            $book->genres = get_the_terms($book->ID, $bookGenre ?? BookPost::KBP_BOOK_GENRE ?? "category")?:[];
+            $book->genres = get_the_terms($book->ID, $bookGenre ?? BookPost::KBP_BOOK_GENRE ?? "category") ?: [];
+
+            $book->tags = wp_get_post_tags($book->ID);
 
             return $book;
         }

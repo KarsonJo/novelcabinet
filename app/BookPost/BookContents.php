@@ -3,7 +3,10 @@
 namespace KarsonJo\BookPost {
 
     use App\View\Composers\BookChapter;
+    use AppendIterator;
+    use Iterator;
     use KarsonJo\BookPost\SqlQuery\BookQuery;
+    use KarsonJo\Utilities\Algorithms\StringAlgorithms;
     use KarsonJo\Utilities\PostCache\CacheBuilder;
     use WP_Post;
 
@@ -27,6 +30,20 @@ namespace KarsonJo\BookPost {
         private int $chapter_index = -1;
 
         /**
+         * 名称到ID的映射
+         * @var null|int[]
+         */
+        private ?array $_nameIdMap = null;
+        private ?array $_volumeNameIdMap = null;
+        private ?array $_chapterNameIdMap = null;
+
+        /**
+         * 
+         * @var null|BookContentsItem[]
+         */
+        private ?array $_idContentMap = null;
+
+        /**
          * 构建目录，如果传入章节id，还会设置目录的活跃位置
          * @param $post 书、卷、章节的wp对象或id
          */
@@ -44,6 +61,10 @@ namespace KarsonJo\BookPost {
         {
 
             $book = BookQuery::rootPost($post)->ID;
+            $this->_nameIdMap = null;
+            $this->_volumeNameIdMap = null;
+            $this->_chapterNameIdMap = null;
+            $this->_idContentMap = null;
 
             if ($public)
                 $status = 'publish';
@@ -208,36 +229,196 @@ namespace KarsonJo\BookPost {
         /**
          * 返回一个可转化为json的通用格式
          * 保持层次结构，
-         * 书结点有：{id:int , volumes:[{volume1}, {volume2}, ...]}
-         * 卷结点有：{id:int , title:string, url:string, chapters:[{chapter1}, {chapter2}, ...]}
-         * 章结点有：{id:int , title:string, url:string}
+         * 书结点有：{id:int volumes:[{volume1}, {volume2}, ...]}
+         * 卷结点有：{id:int, title:string, url:string, chapters:[{chapter1}, {chapter2}, ...]}
+         * 章结点有：{id:int, title:string, url:string}
+         * @param array $fields 输出的字段
          * @return void 
          */
-        public function toJsonArray(): array
+        public function toJsonArray(array $fields = []): array
         {
+            if (!$fields)
+                $fields = ['id', 'title', 'url'];
+
+            $set = [];
+            foreach ($fields as $field)
+                $set[$field] = 1;
+
             $bookObj = [
                 'id' => array_key_first($this->contents),
                 'volumes' => [],
             ];
 
             foreach ($this->getVolumes() as $volume) {
-                $volumeObj = [
-                    'id' => $volume->ID,
-                    'title' => $volume->post_title,
-                    'url' => get_permalink($volume->ID),
-                    'chapters' => [],
-                ];
+                $volumeObj = [];
+                if (isset($set['id']))
+                    $volumeObj['id'] = $volume->ID;
+                if (isset($set['title']))
+                    $volumeObj['title'] = $volume->post_title;
+                if (isset($set['url']))
+                    $volumeObj['url'] = get_permalink($volume->ID);
+                $volumeObj['chapters'] = [];
 
-                foreach ($this[$volume->ID] as $chapter)
-                    $volumeObj['chapters'][] = [
-                        'id' => $chapter->ID,
-                        'title' => $chapter->post_title,
-                        'url' => get_permalink($chapter->ID),
-                    ];
+                // $volumeObj = [
+                //     'id' => $volume->ID,
+                //     'title' => $volume->post_title,
+                //     'url' => get_permalink($volume->ID),
+                //     'chapters' => [],
+                // ];
+
+                foreach ($this[$volume->ID] as $chapter) {
+                    $chapterObj = [];
+                    if (isset($set['id']))
+                        $chapterObj['id'] = $chapter->ID;
+                    if (isset($set['title']))
+                        $chapterObj['title'] = $chapter->post_title;
+                    if (isset($set['url']))
+                        $chapterObj['url'] = get_permalink($chapter->ID);
+
+                    $volumeObj['chapters'][] = $chapterObj;
+
+                    // $volumeObj['chapters'][] = [
+                    //     'id' => $chapter->ID,
+                    //     'title' => $chapter->post_title,
+                    //     'url' => get_permalink($chapter->ID),
+                    // ];
+                }
 
                 $bookObj['volumes'][] = $volumeObj;
             }
             return $bookObj;
+        }
+
+        /**
+         * @param string $filter 查找的类型: volume/chapter
+         * 
+         */
+        protected function getNameIdMap(string $filter): array
+        {
+
+            switch ($filter) {
+                case 'volume':
+                    if ($this->_volumeNameIdMap === null) {
+                        $this->_volumeNameIdMap = [];
+                        foreach ($this->getVolumes() as $volume)
+                            $this->_volumeNameIdMap[$volume->post_title] = $volume->ID;
+                    }
+                    return $this->_volumeNameIdMap;
+                case 'chapter':
+                    if ($this->_chapterNameIdMap === null) {
+                        $this->_chapterNameIdMap = [];
+                        foreach ($this->getVolumes() as $volume) {
+                            foreach ($this[$volume->ID] as $chapter)
+                                $this->_chapterNameIdMap[$chapter->post_title] = $chapter->ID;
+                        }
+                    }
+                    return $this->_chapterNameIdMap;
+                default:
+                    break;
+            }
+            return [];
+        }
+
+        /**
+         * 根据名称获取文章id
+         * 龟速操作，会在第一次调用时生成name=>id映射
+         * @param string $type 查找的类型: volume/chapter
+         * @param string $name 
+         * @return int 文章ID，若不存在，返回0
+         */
+        public function idByName(string $type, string $name): int
+        {
+            $nameIdMap = $this->getNameIdMap($type);
+            return $nameIdMap[$name] ?? 0;
+        }
+
+        /**
+         * 在目录中查找相似的标题项
+         * $threshold不要给太大，否则可能会造成长时间运算
+         * @param string $type 查找的类型: volume/chapter/all
+         * @param string $searched 查找的标题
+         * @param int $threshold 最大允许编辑距离，与给定字符串长度的25%取小值
+         * @param bool $fullScan 全程查找得到最短编辑距离 or 找到第一个符合的返回
+         * @return array [$id, $distance] or [0, -1]
+         */
+        public function idBySimilarName(string $type, string $searched, int $threshold = 2, bool $fullScan = true): array
+        {
+            $strlen = strlen($searched);
+            // 阈值不应该超过25%的字符串长度
+            $threshold = min($threshold, intdiv($strlen, 4));
+            // 精确搜索
+            if ($threshold === 0) {
+                $id = $this->idByName($type, $searched);
+                if ($id)
+                    return [$id, 0];
+            }
+            // 编辑距离搜索
+            else {
+
+                $resId = 0;
+                $minDis = $threshold + 1; // 不会超过threshold
+
+                $nameIdMap = $this->getNameIdMap($type);
+                foreach ($nameIdMap as $name => $id) {
+                    // assert(gettype($name) === "string", new \Exception($name));
+                    $distance = StringAlgorithms::levenshteinWithThreshold(strval($name), $searched, $threshold);
+                    if ($distance !== false) {
+                        // 距离为0可以直接返回了
+                        if ($distance === 0 || !$fullScan)
+                            return [$id, $distance];
+                        else if ($distance < $minDis) {
+                            $resId = $id;
+                            $minDis = $distance;
+                        }
+                    }
+                }
+            }
+            if ($resId === 0)
+                return [0, -1];
+            else
+                return [$resId, $minDis];
+        }
+
+
+        /**
+         * id => contentsItem
+         * @return BookContentsItem[] 
+         */
+        protected function getIdContentsMap(): array
+        {
+            if ($this->_idContentMap === null) {
+                $this->_idContentMap = [];
+                foreach ($this->getVolumes() as $volume) {
+                    $this->_idContentMap[$volume->ID] = $volume;
+
+                    foreach ($this[$volume->ID] as $chapter)
+                        $this->_idContentMap[$chapter->ID] = $chapter;
+                }
+            }
+            return $this->_idContentMap;
+        }
+
+        /**
+         * 根据id获取contentsItem
+         * 龟速操作，会在第一次调用时生成name=>id映射缓存
+         * 如果本次访问需要使用get_post，用它就好，不需要用这个函数
+         * 只有打算避免get_post该函数才有意义
+         * @return null|BookContentsItem 
+         */
+        public function contentsItemById($id): ?BookContentsItem
+        {
+            $map = $this->getIdContentsMap();
+            return $map[$id] ?? null;
+        }
+
+        /**
+         * 目录（卷或章）中是否包含给定的id
+         * @param mixed $id 
+         * @return bool 
+         */
+        public function containsId($id): bool
+        {
+            return $this->contentsItemById($id) !== null;
         }
 
 

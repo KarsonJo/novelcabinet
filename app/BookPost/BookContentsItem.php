@@ -5,7 +5,7 @@ namespace KarsonJo\BookPost {
     {
         public $ID;
         public $post_title;
-        // public $post_parent;
+        public $post_parent;
 
 
         /**
@@ -15,6 +15,7 @@ namespace KarsonJo\BookPost {
         {
             $this->ID = $WP_Post->ID;
             $this->post_title = $WP_Post->post_title;
+            $this->post_parent = $WP_Post->parent_id;
         }
     }
 }

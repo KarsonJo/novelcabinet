@@ -2,14 +2,19 @@
 
 namespace KarsonJo\BookPost\BookMeta {
 
+    use Error;
+    use Exception;
     use KarsonJo\BookPost\BookPost;
     use KarsonJo\BookPost\Route\QueryData;
     use KarsonJo\BookPost\SqlQuery\BookQuery;
     use TenQuality\WP\Database\QueryBuilder;
+    use WP_Post;
     use WP_Query;
 
     class MetaManager
     {
+        private static bool $cascadeDeleting = false;
+        private static bool $cascadeDeleteEnabled = true;
         public static function init()
         {
             add_filter('wp_insert_post_data', [__CLASS__, 'preventUpdatingModifiedDate'], 1, 2);
@@ -19,6 +24,8 @@ namespace KarsonJo\BookPost\BookMeta {
 
 
             add_action('pre_get_posts', [__CLASS__, 'customAdminPostOrder']);
+
+            add_filter('pre_delete_post', [__CLASS__, 'cascadeBookDeleteObserver'], 10, 2);
         }
 
         /**
@@ -147,6 +154,62 @@ namespace KarsonJo\BookPost\BookMeta {
                 return BookQuery::WPQuerySetBookOrder($query);
 
             return $query;
+        }
+
+        /**
+         * ~~不应该隐式改变WordPress的默认行为~~
+         * 不，应该改变，因为它只针对book类型
+         * 但我需要在手动删除时额外小心
+         * 而且我不应该为级联删除体加入transaction
+         * @deprecated
+         * @param mixed $deleted 
+         * @param WP_Post $post 
+         * @return mixed 
+         */
+        static function cascadeBookDeleteObserver($deleted, WP_Post $post)
+        {
+            // error_log("start of delete observer post->: $post->ID");
+            if ($post->post_type === BookPost::KBP_BOOK) {
+                /**
+                 * 为避免删除子文章时也调用该函数，导致无限死循环：
+                 * 此处如果正在执行级联删除，返回null，以在pre_delele_post中示意WordPress继续删除
+                 */
+                if (static::$cascadeDeleting || !static::$cascadeDeleteEnabled)
+                    return $deleted;
+
+                // error_log("start of cascade deletion->: $post->ID");
+
+                try {
+                    // 设置递归标识
+                    static::$cascadeDeleting = true;
+
+                    $deleted = BookQuery::deleteBookPart($post);
+                } catch (Exception $e) {
+                    error_log("cascadeBookDeleteObserver error: {$e->getMessage()}");
+                    return false;
+                } finally {
+                    // 重置递归标识
+                    static::$cascadeDeleting = false;
+                }
+
+                // error_log("end of cascade deletion->: $post->ID:");
+
+                // if ($deleted instanceof WP_Post)
+                //     error_log(var_export($deleted->ID, true));
+                // else
+                //     error_log(var_export($deleted, true));
+            }
+            // if ($deleted instanceof WP_Post)
+            //     error_log("end of delete observer deleted->: $deleted->ID");
+            // else
+            //     error_log("end of delete observer deleted->: $deleted");
+
+            return $deleted;
+        }
+
+        static function setBookautoCascadeDeletion(bool $enabled)
+        {
+            static::$cascadeDeleteEnabled = $enabled;
         }
     }
 }
