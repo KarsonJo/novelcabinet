@@ -739,20 +739,16 @@ namespace KarsonJo\BookPost\SqlQuery {
                     $bookMeta['post_excerpt'] = $book['excerpt'];
 
                 // 类别
-                if (!empty($book['genres'])) {
-                    $newGenres = $book['genres'];
-                    $oldGenres = array_map(fn (WP_Term $wp_term) => $wp_term->term_id, $original->genres);
-                    if (!ArrayHelper::arrayValuesEqual($oldGenres, $newGenres))
-                        $bookMeta['tax_input'] = [BookPost::KBP_BOOK_GENRE => $newGenres];
-                }
+                $oldGenres = array_map(fn (WP_Term $wp_term) => $wp_term->term_id, $original->genres);
+                $newGenres = $book['genres'] ?? [];
+                if (!ArrayHelper::arrayValuesEqual($oldGenres, $newGenres))
+                    $bookMeta['tax_input'] = [BookPost::KBP_BOOK_GENRE => $newGenres];
 
                 // 标签
-                if (!empty($book['tags'])) {
-                    $newTags = $book['tags'];
-                    $oldTags = array_map(fn (WP_Term $wp_term) => $wp_term->name, $original->tags);
-                    if (!ArrayHelper::arrayValuesEqual($oldTags, $newTags))
-                        $bookMeta['tags_input'] = $$newTags;
-                }
+                $oldTags = array_map(fn (WP_Term $wp_term) => $wp_term->name, $original->tags);
+                $newTags = $book['tags'] ?? [];
+                if (!ArrayHelper::arrayValuesEqual($oldTags, $newTags))
+                    $bookMeta['tags_input'] = $newTags;
 
                 if ($bookMeta) {
                     $bookMeta['ID'] = $original->ID;
