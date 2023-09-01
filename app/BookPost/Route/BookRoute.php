@@ -5,18 +5,17 @@ namespace KarsonJo\BookPost\Route {
     use Exception;
     use KarsonJo\BookPost\Book;
     use KarsonJo\BookPost\BookContents;
-    use KarsonJo\BookPost\BookContentsItem;
-    use KarsonJo\BookPost\Importer\Importer;
+
     use WP_REST_Response;
 
-    use KarsonJo\BookPost\SqlQuery as Query;
+
     use KarsonJo\BookPost\SqlQuery\AuthorQuery;
     use KarsonJo\BookPost\SqlQuery\BookQuery;
     use KarsonJo\BookPost\SqlQuery\QueryException;
     use KarsonJo\Utilities\Algorithms\StringAlgorithms;
     use NovelCabinet\Utilities\ArrayHelper;
-    use Symfony\Component\Mime\Message;
-    use TenQuality\WP\Database\QueryBuilder;
+
+    use WP_Error;
     use WP_REST_Request;
     use WP_Term;
 
@@ -31,6 +30,7 @@ namespace KarsonJo\BookPost\Route {
                 static::allowLocalHttpAuth();
 
                 static::bookRepresentation($namespace);
+                static::bookCoverRepresentation($namespace);
             });
         }
 
@@ -57,13 +57,9 @@ namespace KarsonJo\BookPost\Route {
                      * 检测是否有title
                      */
                     if (empty($bookJson['title'])) {
-                        $e = QueryException::fieldInvalid('book title empty');
                         return new WP_REST_Response([
                             'message' => 'please always provide a book title',
-                            'error' => [
-                                'code' => $e->getCode(),
-                                'message' => $e->getMessage(),
-                            ]
+                            'error' => static::getErrorMessage(QueryException::fieldInvalid('book title empty')),
                         ], 422);
                     }
 
@@ -76,13 +72,9 @@ namespace KarsonJo\BookPost\Route {
                     ) {
                         // 给定的数据是否存在至少一个卷
                         if (empty($bookJson['volumes'])) {
-                            $e = QueryException::fieldInvalid('book volumes empty');
                             return new WP_REST_Response([
                                 'message' => 'cannot create book due to missing / empty field: volumes',
-                                'error' => [
-                                    'code' => $e->getCode(),
-                                    'message' => $e->getMessage(),
-                                ]
+                                'error' => static::getErrorMessage(QueryException::fieldInvalid('book volumes empty'))
                             ], 422);
                         }
 
@@ -101,22 +93,15 @@ namespace KarsonJo\BookPost\Route {
                         } catch (Exception $e) {
                             return new WP_REST_Response([
                                 'message' => 'failed due to insert error',
-                                'error' => [
-                                    'code' => $e->getCode(),
-                                    'message' => $e->getMessage(),
-                                ]
+                                'error' => static::getErrorMessage($e)
                             ], 422);
                         }
                     }
                     // 书籍存在：报错
                     else {
-                        $e = QueryException::fieldInvalid('book already exists');
                         return new WP_REST_Response([
                             'message' => 'failed due to duplicate name and author, you may set query param [?' . static::FORCE_CREATE_BOOK_QUERY_KEY . '=true] to create a new book anyway',
-                            'error' => [
-                                'code' => $e->getCode(),
-                                'message' => $e->getMessage(),
-                            ]
+                            'error' => static::getErrorMessage(QueryException::fieldInvalid('book already exists'))
                         ], 409);
                     }
                 }
@@ -167,17 +152,17 @@ namespace KarsonJo\BookPost\Route {
                     $jsonData = $request->get_json_params();
 
                     // 路由路径ID为空
-                    if (empty($request['bookId'])) {
-                        return APIRoute::response(null, "book id empty", 422);
-                    }
+                    // if (empty($request['bookId'])) {
+                    //     return APIRoute::response(null, "book id empty", 422);
+                    // }
                     // 数据中提供了ID，但与路由路径ID不符
-                    else if (!empty($jsonData['id']) && $jsonData['id'] != $request['bookId']) {
+                    if (!empty($jsonData['id']) && $jsonData['id'] != $request['bookId']) {
                         return APIRoute::response(null, "book id provided but not matching url endpoint", 422);
                     }
 
                     $originalBook = BookQuery::getBook($request['bookId']);
                     if (!$originalBook)
-                        return APIRoute::response(null, "book id invalid", 422);
+                        return APIRoute::response(null, "book id invalid", 404);
 
 
                     try {
@@ -189,12 +174,128 @@ namespace KarsonJo\BookPost\Route {
                     } catch (Exception $e) {
                         return new WP_REST_Response([
                             'message' => 'failed due to insert error',
-                            'error' => [
-                                'code' => $e->getCode(),
-                                'message' => $e->getMessage(),
-                            ]
+                            'error' => static::getErrorMessage($e)
                         ], 422);
                     }
+                }
+            ]);
+        }
+
+        static function bookCoverRepresentation($namespace, $path = '/books/(?P<bookId>\d+)/cover')
+        {
+            register_rest_route($namespace, $path, [
+                'methods' => 'GET',
+                'permission_callback' => fn () => current_user_can('import'),
+                'callback' => function (WP_REST_Request $request) {
+                    $book = BookQuery::getBook($request['bookId']);
+                    if (!$book || $book->ID != $request['bookId']) {
+                        return new WP_REST_Response([
+                            'message' => 'book not exists',
+                            'error' => static::getErrorMessage(QueryException::fieldInvalid(('book not found')))
+                        ], 404);
+                    }
+
+                    $url = get_the_post_thumbnail_url($book->ID);
+                    if (!$url)
+                        return new WP_REST_Response([
+                            'message' => 'thumbnail not exists',
+                            'error' => static::getErrorMessage(QueryException::fieldInvalid(('thumbnail not found')))
+                        ], 404);
+                    return new WP_REST_Response(['url' => $url]);
+                }
+            ]);
+            /**
+             * php的put/patch请求不接受multipart/form-data
+             * 但restful api在上传文件时需要put的multipart支持
+             * 因此自行处理
+             * https://bugs.php.net/bug.php?id=55815
+             * 
+             */
+            register_rest_route($namespace, $path, [
+                'methods' => 'POST',
+                'permission_callback' => fn () => current_user_can('import'),
+                'callback' => function (WP_REST_Request $request) {
+
+                    /**
+                     * 检测输入合法性
+                     */
+                    $book = BookQuery::getBook($request['bookId']);
+                    if (!$book || $book->ID != $request['bookId']) {
+                        return new WP_REST_Response([
+                            'message' => 'failed uploading image',
+                            'error' => static::getErrorMessage(QueryException::fieldInvalid(('book not found')))
+                        ], 404);
+                    }
+                    if (empty($_FILES['src'])) {
+                        return new WP_REST_Response([
+                            'message' => 'failed uploading image',
+                            'error' => static::getErrorMessage(QueryException::fieldInvalid(('src is empty')))
+                        ], 422);
+                    }
+
+
+                    /**
+                     * 检测当前封面图状态
+                     */
+                    $deleteOld = false;
+                    //有封面图
+                    if (($oldThumbnailId = get_post_thumbnail_id($book->ID)) && ($thumbnailFile = get_attached_file($oldThumbnailId))) {
+                        $newMd5Hash = md5_file($_FILES["src"]["tmp_name"]);
+                        $currMd5Hash = md5_file($thumbnailFile);
+                        // 文件相同
+                        if ($newMd5Hash == $currMd5Hash)
+                            return new WP_REST_Response(['message' => 'current cover is the same'], 200);
+                        // 删除旧的
+                        else
+                            $deleteOld = true;
+                    }
+
+
+                    /**
+                     * 上传新图片
+                     */
+                    require_once(ABSPATH . 'wp-admin/includes/image.php');
+                    require_once(ABSPATH . 'wp-admin/includes/file.php');
+                    require_once(ABSPATH . 'wp-admin/includes/media.php');
+
+                    // 不要产生不同尺寸
+                    // todo: 也许应该上升为设置
+                    $forceOnlyOneSize = fn () => [];
+                    add_filter('intermediate_image_sizes_advanced', $forceOnlyOneSize, 9, 0);
+
+                    $attachment_id = media_handle_upload('src', $book->ID);
+                    if ($attachment_id instanceof WP_Error) {
+                        return new WP_REST_Response([
+                            'message' => 'failed uploading image',
+                            'error' => static::getErrorMessage($attachment_id),
+                        ], 422);
+                    }
+
+                    $result = set_post_thumbnail($book->ID, $attachment_id);
+                    if (!$result) {
+                        return new WP_REST_Response([
+                            'message' => 'file uploaded, but failed to set thumbnail',
+                            'error' => static::getErrorMessage(['unknown']),
+                        ], 422);
+                    }
+
+                    remove_filter('intermediate_image_sizes_advanced', $forceOnlyOneSize);
+
+
+                    /**
+                     * 秋后算账（删除）
+                     */
+                    if ($oldThumbnailId && $deleteOld) {
+                        $attachement = get_post($oldThumbnailId);
+                        // 是从属于该文章的attachment才删除
+                        if ($attachement->post_parent == $book->ID)
+                            wp_delete_attachment($oldThumbnailId, true);
+                    }
+
+                    if ($oldThumbnailId)
+                        return new WP_REST_Response(['message' => 'cover successfully updated']);
+                    else
+                        return new WP_REST_Response(['message' => 'cover successfully uploaded'], 201);
                 }
             ]);
         }
@@ -293,6 +394,15 @@ namespace KarsonJo\BookPost\Route {
             }
 
             return null;
+        }
+
+        protected static function getErrorMessage(WP_Error|Exception|array $error): array
+        {
+            if ($error instanceof WP_Error)
+                return ['code' => $error->get_error_code(), 'message' => $error->get_error_message()];
+            if ($error instanceof Exception)
+                return ['code' => $error->getCode(), 'message' => $error->getMessage()];
+            return ['code' => $error[0] ?? '', 'message' => $error[1] ?? ''];
         }
     }
 }
