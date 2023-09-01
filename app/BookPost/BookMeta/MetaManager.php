@@ -26,6 +26,8 @@ namespace KarsonJo\BookPost\BookMeta {
             add_action('pre_get_posts', [__CLASS__, 'customAdminPostOrder']);
 
             add_filter('pre_delete_post', [__CLASS__, 'cascadeBookDeleteObserver'], 10, 2);
+
+            add_action('before_delete_post', [__CLASS__, 'cascadeBookAttachmentDeleteObserver']);
         }
 
         /**
@@ -210,6 +212,21 @@ namespace KarsonJo\BookPost\BookMeta {
         static function setBookautoCascadeDeletion(bool $enabled)
         {
             static::$cascadeDeleteEnabled = $enabled;
+        }
+
+        /**
+         * 删除书本时，应级联删除所有attachment
+         * @param mixed $postId 
+         * @return void 
+         */
+        static function cascadeBookAttachmentDeleteObserver($postId)
+        {
+            if (get_post_type($postId) == BookPost::KBP_BOOK) {
+                $attachments = get_attached_media('', $postId);
+
+                foreach ($attachments as $attachment)
+                    wp_delete_attachment($attachment->ID, 'true');
+            }
         }
     }
 }
