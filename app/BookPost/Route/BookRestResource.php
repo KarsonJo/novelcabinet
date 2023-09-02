@@ -394,20 +394,22 @@ namespace KarsonJo\BookPost\Route {
              */
             if ($keywordAuthor) {
                 $authorId = AuthorQuery::getAuthorID($keywordAuthor);
-                $books = BookQuery::getBooks(['post_author' => $authorId]);
-                if (count($books) > 0) {
-                    /**
-                     * 作者名有匹配，不一定就返回书本
-                     * 返回书名误差最小，且在阈值之内的一本
-                     */
-                    [$book, $value] = ArrayHelper::minBy(
-                        $books,
-                        fn (Book $book) => StringAlgorithms::levenshteinWithThreshold($book->title, $keywordTitle, $titleThreshold, PHP_INT_MAX),
-                        0
-                    );
+                if ($authorId) {
+                    $books = BookQuery::getBooks(['post_author' => $authorId]);
+                    if (count($books) > 0) {
+                        /**
+                         * 作者名有匹配，不一定就返回书本
+                         * 返回书名误差最小，且在阈值之内的一本
+                         */
+                        [$book, $value] = ArrayHelper::minBy(
+                            $books,
+                            fn (Book $book) => StringAlgorithms::levenshteinWithThreshold($book->title, $keywordTitle, $titleThreshold, PHP_INT_MAX),
+                            0
+                        );
 
-                    if ($value <= $titleThreshold)
-                        return $book;
+                        if ($value <= $titleThreshold)
+                            return $book;
+                    }
                 }
             }
 

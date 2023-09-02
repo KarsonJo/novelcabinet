@@ -39,9 +39,10 @@ namespace KarsonJo\BookPost\SqlQuery {
                 if ($autoCreate)
                     $user = static::createAuthor($userName);
             } catch (QueryException $e) {
-                throw QueryException::userNotExist('', $e);
+                throw QueryException::cannotCreateUser('', $e);
             }
-            throw QueryException::userNotExist();
+            // throw QueryException::userNotExist();
+            return 0;
         }
 
 
