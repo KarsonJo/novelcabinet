@@ -25,7 +25,7 @@ namespace KarsonJo\BookPost\Route {
 
                 static::postRepresentation($namespace);
             });
-            BookRoute::init();
+            // BookRoute::init();
         }
 
         static function bookRating($namespace, $path = '/rate/(?P<postId>\d+)')

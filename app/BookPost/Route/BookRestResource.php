@@ -19,96 +19,23 @@ namespace KarsonJo\BookPost\Route {
     use WP_REST_Request;
     use WP_Term;
 
-    /**
-     * @deprecated
-     * @package KarsonJo\BookPost\Route
-     */
-    class BookRoute
+    class BookRestResource extends RestResource
     {
         const FORCE_CREATE_BOOK_QUERY_KEY = "force";
-        public static function init($apiDomain = 'kbp', $apiVersion = 'v1')
+        protected static string $idPattern = '(?P<bookId>\d+)';
+
+        protected function registerRoutes($namespace, $path, $permissions)
         {
-            $namespace = $apiDomain . '/' . $apiVersion;
+            // print_r("route: $path\n");
+            // print_r("route: " . static::pathWithIdPattern($path) . "\n");
 
-            add_action('rest_api_init', function () use ($namespace) {
-                static::allowLocalHttpAuth();
-
-                static::bookRepresentation($namespace);
-                static::bookCoverRepresentation($namespace);
-            });
-        }
-
-        /**
-         * abstract REST API representation: 
-         * book
-         * 只有用户拥有import权限才可以调用
-         * @param mixed $namespace 
-         * @param string $path 
-         * @return void 
-         */
-        static function bookRepresentation($namespace, $path = '/books')
-        {
             /**
              * 插入book
              */
             register_rest_route($namespace, $path, [
                 'methods' => 'POST',
-                'permission_callback' => fn () => current_user_can('import'),
-                'callback' => function (WP_REST_Request $request) use ($namespace, $path) {
-                    $queryVars = $request->get_query_params();
-                    $bookJson = $request->get_json_params();
-                    /**
-                     * 检测是否有title
-                     */
-                    if (empty($bookJson['title'])) {
-                        return new WP_REST_Response([
-                            'message' => 'please always provide a book title',
-                            'error' => static::getErrorMessage(QueryException::fieldInvalid('book title empty')),
-                        ], 422);
-                    }
-
-                    /**
-                     * 创建书籍：书籍不存在，或者有强制创建字段
-                     */
-                    if (
-                        isset($queryVars[static::FORCE_CREATE_BOOK_QUERY_KEY]) && filter_var($queryVars[static::FORCE_CREATE_BOOK_QUERY_KEY], FILTER_VALIDATE_BOOLEAN)
-                        || BookQuery::bookSimilarMatch($bookJson['title'], $bookJson['author'], 0, 0) === null
-                    ) {
-                        // 给定的数据是否存在至少一个卷
-                        if (empty($bookJson['volumes'])) {
-                            return new WP_REST_Response([
-                                'message' => 'cannot create book due to missing / empty field: volumes',
-                                'error' => static::getErrorMessage(QueryException::fieldInvalid('book volumes empty'))
-                            ], 422);
-                        }
-
-                        // 是时候创建一本新书了
-                        try {
-                            [$bookId, $report] = BookQuery::createBook($bookJson);
-                            return new WP_REST_Response(
-                                [
-                                    'message' => 'successfully created',
-                                    'report' => $report,
-                                    'data' => static::bookToOutputResult(BookQuery::getBook($bookId))
-                                ],
-                                201,
-                                ['Location' => rest_url("$namespace/$path/$bookId")]
-                            );
-                        } catch (Exception $e) {
-                            return new WP_REST_Response([
-                                'message' => 'failed due to insert error',
-                                'error' => static::getErrorMessage($e)
-                            ], 422);
-                        }
-                    }
-                    // 书籍存在：报错
-                    else {
-                        return new WP_REST_Response([
-                            'message' => 'failed due to duplicate name and author, you may set query param [?' . static::FORCE_CREATE_BOOK_QUERY_KEY . '=true] to create a new book anyway',
-                            'error' => static::getErrorMessage(QueryException::fieldInvalid('book already exists'))
-                        ], 409);
-                    }
-                }
+                'permission_callback' => static::permissionCallback($permissions),
+                'callback' => fn ($r) => $this->insertBook($r, $namespace, $path)
             ]);
 
             /**
@@ -116,78 +43,165 @@ namespace KarsonJo\BookPost\Route {
              */
             register_rest_route($namespace, $path,  [
                 'methods' => ['GET', 'HEAD'],
-                'permission_callback' => fn () => current_user_can('import'),
-                'callback' => function (WP_REST_Request $request) {
-                    $method = $request->get_method();
-                    if ($method === 'HEAD')
-                        return new WP_REST_Response(null, 200);
-                    /**
-                     * book match
-                     */
-                    if (isset($request['title']) || isset($request['author'])) {
-                        $book = BookQuery::bookSimilarMatch($request['title'], $request['author'] ?? null);
-                        if ($book)
-                            return new WP_REST_Response([static::bookToOutputResult($book)]);
-                        else
-                            return new WP_REST_Response([]);
-                    }
-                }
+                'permission_callback' => static::permissionCallback($permissions),
+                'callback' => fn ($r) => $this->searchBook($r)
             ]);
-            
+
             /**
              * 获取一本书
              */
-            register_rest_route($namespace, $path . '/(?P<bookId>\d+)', [
+            register_rest_route($namespace,  static::pathWithIdPattern($path), [
                 'methods' => 'GET',
-                'permission_callback' => fn () => current_user_can('import'),
-                'callback' => function (WP_REST_Request $request) {
-                    $book = Book::initBookFromPost($request['bookId']);
-
-                    if ($book)
-                        return new WP_REST_Response(static::bookToOutputResult($book));
-
-                    return APIRoute::response(null, "not found", 404);
-                }
+                'permission_callback' => static::permissionCallback($permissions),
+                'callback' => fn ($r) => $this->getBook($r)
             ]);
 
             /**
              * 更新book
              */
-            register_rest_route($namespace, $path . '/(?P<bookId>\d+)', [
+            register_rest_route($namespace,  static::pathWithIdPattern($path), [
                 'methods' => 'PUT',
-                'permission_callback' => fn () => current_user_can('import'),
-                'callback' => function (WP_REST_Request $request) {
-                    $jsonData = $request->get_json_params();
-
-                    // 路由路径ID为空
-                    // if (empty($request['bookId'])) {
-                    //     return APIRoute::response(null, "book id empty", 422);
-                    // }
-                    // 数据中提供了ID，但与路由路径ID不符
-                    if (!empty($jsonData['id']) && $jsonData['id'] != $request['bookId']) {
-                        return APIRoute::response(null, "book id provided but not matching url endpoint", 422);
-                    }
-
-                    $originalBook = BookQuery::getBook($request['bookId']);
-                    if (!$originalBook)
-                        return APIRoute::response(null, "book id invalid", 404);
-
-
-                    try {
-                        $report = BookQuery::putBook($request->get_json_params(), $originalBook);
-                        return new WP_REST_Response([
-                            'message' => 'successfully updated',
-                            'report' => $report,
-                        ]);
-                    } catch (Exception $e) {
-                        return new WP_REST_Response([
-                            'message' => 'failed due to insert error',
-                            'error' => static::getErrorMessage($e)
-                        ], 422);
-                    }
-                }
+                'permission_callback' => static::permissionCallback($permissions),
+                'callback' => fn ($r) => $this->putBook($r)
             ]);
         }
+
+        protected function getIdentifier()
+        {
+            return "Book";
+        }
+
+
+        protected function insertBook(WP_REST_Request $request, string $namespace, string $path)
+        {
+            $queryVars = $request->get_query_params();
+            $bookJson = $request->get_json_params();
+            /**
+             * 检测是否有title
+             */
+            if (empty($bookJson['title'])) {
+                return new WP_REST_Response([
+                    'message' => 'please always provide a book title',
+                    'error' => static::getErrorMessage(QueryException::fieldInvalid('book title empty')),
+                ], 422);
+            }
+
+            /**
+             * 创建书籍：书籍不存在，或者有强制创建字段
+             */
+            if (
+                isset($queryVars[static::FORCE_CREATE_BOOK_QUERY_KEY]) && filter_var($queryVars[static::FORCE_CREATE_BOOK_QUERY_KEY], FILTER_VALIDATE_BOOLEAN)
+                || BookQuery::bookSimilarMatch($bookJson['title'], $bookJson['author'], 0, 0) === null
+            ) {
+                // 给定的数据是否存在至少一个卷
+                if (empty($bookJson['volumes'])) {
+                    return new WP_REST_Response([
+                        'message' => 'cannot create book due to missing / empty field: volumes',
+                        'error' => static::getErrorMessage(QueryException::fieldInvalid('book volumes empty'))
+                    ], 422);
+                }
+
+                // 是时候创建一本新书了
+                try {
+                    [$bookId, $report] = BookQuery::createBook($bookJson);
+                    return new WP_REST_Response(
+                        [
+                            'message' => 'successfully created',
+                            'report' => $report,
+                            'data' => static::bookToOutputResult(BookQuery::getBook($bookId))
+                        ],
+                        201,
+                        ['Location' => rest_url("$namespace/$path/$bookId")]
+                    );
+                } catch (Exception $e) {
+                    return new WP_REST_Response([
+                        'message' => 'failed due to insert error',
+                        'error' => static::getErrorMessage($e)
+                    ], 422);
+                }
+            }
+            // 书籍存在：报错
+            else {
+                return new WP_REST_Response([
+                    'message' => 'failed due to duplicate name and author, you may set query param [?' . static::FORCE_CREATE_BOOK_QUERY_KEY . '=true] to create a new book anyway',
+                    'error' => static::getErrorMessage(QueryException::fieldInvalid('book already exists'))
+                ], 409);
+            }
+        }
+
+        protected function searchBook(WP_REST_Request $request)
+        {
+            $method = $request->get_method();
+            if ($method === 'HEAD')
+                return new WP_REST_Response(null, 200);
+            /**
+             * book match
+             */
+            if (isset($request['title']) || isset($request['author'])) {
+                $book = BookQuery::bookSimilarMatch($request['title'], $request['author'] ?? null);
+                if ($book)
+                    return new WP_REST_Response([static::bookToOutputResult($book)]);
+                else
+                    return new WP_REST_Response([]);
+            }
+        }
+
+        protected function getBook(WP_REST_Request $request)
+        {
+            $book = Book::initBookFromPost($request['bookId']);
+
+            if ($book)
+                return new WP_REST_Response(static::bookToOutputResult($book));
+
+            return APIRoute::response(null, "not found", 404);
+        }
+
+        protected function putBook(WP_REST_Request $request)
+        {
+            $jsonData = $request->get_json_params();
+
+            // 路由路径ID为空
+            // if (empty($request['bookId'])) {
+            //     return APIRoute::response(null, "book id empty", 422);
+            // }
+            // 数据中提供了ID，但与路由路径ID不符
+            if (!empty($jsonData['id']) && $jsonData['id'] != $request['bookId']) {
+                return APIRoute::response(null, "book id provided but not matching url endpoint", 422);
+            }
+
+            $originalBook = BookQuery::getBook($request['bookId']);
+            if (!$originalBook)
+                return APIRoute::response(null, "book id invalid", 404);
+
+
+            try {
+                $report = BookQuery::putBook($request->get_json_params(), $originalBook);
+                return new WP_REST_Response([
+                    'message' => 'successfully updated',
+                    'report' => $report,
+                ]);
+            } catch (Exception $e) {
+                return new WP_REST_Response([
+                    'message' => 'failed due to insert error',
+                    'error' => static::getErrorMessage($e)
+                ], 422);
+            }
+        }
+
+
+
+
+        public static function init($apiDomain = 'kbp', $apiVersion = 'v1')
+        {
+            $namespace = $apiDomain . '/' . $apiVersion;
+
+            add_action('rest_api_init', function () use ($namespace) {
+                static::allowLocalHttpAuth();
+
+                static::bookCoverRepresentation($namespace);
+            });
+        }
+
 
         static function bookCoverRepresentation($namespace, $path = '/books/(?P<bookId>\d+)/cover')
         {
@@ -308,6 +322,9 @@ namespace KarsonJo\BookPost\Route {
             ]);
         }
 
+
+
+
         /**
          * 允许本地环回地址通过http验证身份
          * @return void 
@@ -317,13 +334,6 @@ namespace KarsonJo\BookPost\Route {
             add_filter('wp_is_application_passwords_available', function (bool $available) {
                 return $available || $_SERVER['REMOTE_ADDR'] === '127.0.0.1';
             });
-        }
-
-        protected static function returnImport($tasks, $status = 200)
-        {
-            return new WP_REST_Response([
-                'tasks' => $tasks,
-            ], $status);
         }
 
         /**
@@ -404,13 +414,13 @@ namespace KarsonJo\BookPost\Route {
             return null;
         }
 
-        protected static function getErrorMessage(WP_Error|Exception|array $error): array
-        {
-            if ($error instanceof WP_Error)
-                return ['code' => $error->get_error_code(), 'message' => $error->get_error_message()];
-            if ($error instanceof Exception)
-                return ['code' => $error->getCode(), 'message' => $error->getMessage()];
-            return ['code' => $error[0] ?? '', 'message' => $error[1] ?? ''];
-        }
+        // protected static function getErrorMessage(WP_Error|Exception|array $error): array
+        // {
+        //     if ($error instanceof WP_Error)
+        //         return ['code' => $error->get_error_code(), 'message' => $error->get_error_message()];
+        //     if ($error instanceof Exception)
+        //         return ['code' => $error->getCode(), 'message' => $error->getMessage()];
+        //     return ['code' => $error[0] ?? '', 'message' => $error[1] ?? ''];
+        // }
     }
 }

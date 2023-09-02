@@ -63,5 +63,24 @@ namespace NovelCabinet\Utilities {
             }
             return [$maxValueItem, $maxValue];
         }
+
+
+        static function arrayAny(array $array, callable $fn) {
+            foreach ($array as $value) {
+                if($fn($value)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        static function arrayEvery(array $array, callable $fn) {
+            foreach ($array as $value) {
+                if(!$fn($value)) {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 }
