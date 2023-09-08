@@ -3,6 +3,7 @@
 namespace KarsonJo\BookPost\Route {
 
     use Exception;
+    use Throwable;
     use WP_Error;
 
     abstract class RestResource
@@ -63,14 +64,17 @@ namespace KarsonJo\BookPost\Route {
             $result = [];
             if (!empty($this->name)) {
                 $basePath = "$this->name";
+                // $result[$this->getIdentifier()] = [
+                //     'segment' => $basePath,
+                //     'single' => empty(static::$idPattern),
+                //     // 'identifier' => 
+                // ];
                 $result['segment'] = $basePath;
                 $result['single'] = empty(static::$idPattern);
-                $result['identifier'] = $this->getIdentifier();
             }
-
             foreach ($this->subResources as $subResource)
                 // $result = array_merge($result, $subResource->getRoutes($namespace, static::pathWithIdPattern($basePath)));
-                $result['path'] = $subResource->getRoutes($namespace, static::pathWithIdPattern($basePath));
+                $result[$subResource->getIdentifier()] = $subResource->getRoutes($namespace, static::pathWithIdPattern($basePath));
             return $result;
         }
 
@@ -127,11 +131,11 @@ namespace KarsonJo\BookPost\Route {
             return empty(static::$idPattern) ? $basePath : $basePath . '/' . static::$idPattern;
         }
 
-        protected static function getErrorMessage(WP_Error|Exception|array $error): array
+        protected static function getErrorMessage(WP_Error|Throwable|array $error): array
         {
             if ($error instanceof WP_Error)
                 return ['code' => $error->get_error_code(), 'message' => $error->get_error_message()];
-            if ($error instanceof Exception)
+            if ($error instanceof Throwable)
                 return ['code' => $error->getCode(), 'message' => $error->getMessage()];
             return ['code' => $error[0] ?? '', 'message' => $error[1] ?? ''];
         }

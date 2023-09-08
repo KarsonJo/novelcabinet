@@ -65,22 +65,39 @@ namespace NovelCabinet\Utilities {
         }
 
 
-        static function arrayAny(array $array, callable $fn) {
+        static function arrayAny(array $array, callable $fn)
+        {
             foreach ($array as $value) {
-                if($fn($value)) {
+                if ($fn($value)) {
                     return true;
                 }
             }
             return false;
         }
-        
-        static function arrayEvery(array $array, callable $fn) {
+
+        static function arrayEvery(array $array, callable $fn)
+        {
             foreach ($array as $value) {
-                if(!$fn($value)) {
+                if (!$fn($value)) {
                     return false;
                 }
             }
             return true;
+        }
+
+        static function foreach_batch(array $list, int $batchSize, callable $batchBody, ?callable $batchStart, ?callable $batchEnd)
+        {
+            $batches = array_chunk($list, $batchSize);
+            foreach ($batches as $batch) {
+                if (is_callable($batchStart))
+                    $batchStart($batch);
+
+                foreach ($batch as $item)
+                    $batchBody($item);
+
+                if (is_callable($batchEnd))
+                    $batchEnd($batch);
+            }
         }
     }
 }

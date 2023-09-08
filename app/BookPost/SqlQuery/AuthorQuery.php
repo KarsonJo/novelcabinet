@@ -9,15 +9,23 @@ namespace KarsonJo\BookPost\SqlQuery {
     {
         /**
          * 以给定用户名创建用户
-         * @param string $userName 
+         * @param string $userLogin 
          * @return int id 
          * @throws QueryException 
          */
-        static function createAuthor(string $userName): int
+        static function createAuthor(string $userLogin, ?string $displayName = null): int
         {
-            $result = wp_create_user($userName, wp_generate_password());
+            // print_r($userLogin);
+            // $result = wp_create_user($userName, wp_generate_password());
+            $result = wp_insert_user([
+                'user_login' => $userLogin,
+                'user_pass' => wp_generate_password(),
+                'display_name' => $displayName ?? $userLogin
+            ]);
+
+            // print_r($result);
             if (is_wp_error($result))
-                throw QueryException::cannotCreateUser();
+                throw QueryException::cannotCreateUser($result->get_error_message());
 
             return $result;
         }
@@ -29,7 +37,7 @@ namespace KarsonJo\BookPost\SqlQuery {
          * @return int
          * @throws QueryException 
          */
-        static function getAuthorID(string $userName, $autoCreate = false): int
+        static function getAuthorID(string $userName, $autoCreate = false, ?string $createDisplayName = null): int
         {
             $user = get_user_by('login', $userName);
             if ($user !== false)
@@ -37,21 +45,23 @@ namespace KarsonJo\BookPost\SqlQuery {
 
             try {
                 if ($autoCreate)
-                    $user = static::createAuthor($userName);
+                    return static::createAuthor($userName, $createDisplayName);
             } catch (QueryException $e) {
-                throw QueryException::cannotCreateUser('', $e);
+                throw QueryException::userNotExist($e->getMessage(), $e);
             }
-            // throw QueryException::userNotExist();
-            return 0;
+            throw QueryException::userNotExist();
+            // return 0;
         }
 
 
 
         static function getAuthorUserName(int $id)
         {
+            // print($id);
+            // return "123";
             $loginName = static::getAuthorField($id, 'user_login');
-            if ($loginName === false)
-                throw QueryException::userNotExist();
+            // if ($loginName === false)
+            //     throw QueryException::userNotExist();
 
             return $loginName;
         }
@@ -60,7 +70,7 @@ namespace KarsonJo\BookPost\SqlQuery {
         {
             $displayName = static::getAuthorField($id, 'display_name');
             if ($displayName === false)
-                throw QueryException::userNotExist();
+                return static::getAuthorUserName($id);
 
             return $displayName;
         }

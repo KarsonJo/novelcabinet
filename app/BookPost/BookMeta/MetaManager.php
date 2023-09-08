@@ -185,9 +185,14 @@ namespace KarsonJo\BookPost\BookMeta {
                     // 设置递归标识
                     static::$cascadeDeleting = true;
 
+                    // global $wpdb;
+                    // $wpdb->query('START TRANSACTION;');
+
                     $deleted = BookQuery::deleteBookPart($post);
+                    // $wpdb->query('COMMIT;');
                 } catch (Exception $e) {
                     error_log("cascadeBookDeleteObserver error: {$e->getMessage()}");
+                    // $wpdb->query('ROLLBACK;');
                     return false;
                 } finally {
                     // 重置递归标识

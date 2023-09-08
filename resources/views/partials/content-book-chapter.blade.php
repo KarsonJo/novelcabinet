@@ -83,7 +83,7 @@
                     <span>{{ $postDateTime }}</span>
                 </div>
             </div>
-            <div class="chapter-content">
+            <div class="chapter-content indent-8">
                 @php(the_content())
             </div>
             <div class="tag.pc-nav not-prose pt-8 flex gap-0.5 text-center cursor-pointer max-sm:hidden">

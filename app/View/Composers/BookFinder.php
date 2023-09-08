@@ -34,7 +34,7 @@ class BookFinder extends Composer
         $fav = QueryData::filterInFavorite();
         $page = max(QueryData::filterPage(), 1);
         $limit = QueryData::filterLimit();
-        $limit = max(1, min(100, $limit ? $limit : 6));
+        $limit = max(1, min(100, $limit ? $limit : 20));
 
         $builder = BookFilterBuilder::create();
         if ($genre)
@@ -166,8 +166,6 @@ class BookFinder extends Composer
 
     function getPagination(int $curr, int $end, int $maxLen = 3): array
     {
-        print_r($curr);
-        print_r($end);
         $getPageUrl = function ($page) {
             global $wp;
             $query_args = $wp->query_vars;

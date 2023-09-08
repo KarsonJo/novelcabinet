@@ -81,9 +81,12 @@ use NovelCabinet\Utilities\Formatter;
                             peer-checked:hidden sm:hidden" for="menu-toggle">
                             展开全部
                         </label>
-                        <p class="tag.book-excerpt text-tertiary my-4 max-h-12 sm:max-h-[none] peer-checked:max-h-[none]">
-                            {{ $book->excerpt }}
-                        </p>
+                        {{-- <p class="tag.book-excerpt text-tertiary my-4 max-h-12 sm:max-h-[none] peer-checked:max-h-[none]"> --}}
+                            <div class="tag.book-excerpt prose text-tertiary my-4 max-w-none max-h-12 sm:max-h-[none] peer-checked:max-h-[none] indent-1">
+                                {!! wpautop(esc_html($book->excerpt)) !!}
+
+                            </div>
+                        {{-- </p> --}}
                     </div>
                     <div class="flex flex-wrap gap-2 select-none">
                         <div class="max-sm:grow">

@@ -14,7 +14,7 @@ namespace KarsonJo\BookPost\Route {
     use KarsonJo\BookPost\SqlQuery\QueryException;
     use KarsonJo\Utilities\Algorithms\StringAlgorithms;
     use NovelCabinet\Utilities\ArrayHelper;
-
+    use Throwable;
     use WP_Error;
     use WP_REST_Request;
     use WP_Term;
@@ -50,7 +50,7 @@ namespace KarsonJo\BookPost\Route {
             /**
              * 获取一本书
              */
-            register_rest_route($namespace,  static::pathWithIdPattern($path), [
+            register_rest_route($namespace, static::pathWithIdPattern($path), [
                 'methods' => 'GET',
                 'permission_callback' => static::permissionCallback($permissions),
                 'callback' => fn ($r) => $this->getBook($r)
@@ -59,10 +59,16 @@ namespace KarsonJo\BookPost\Route {
             /**
              * 更新book
              */
-            register_rest_route($namespace,  static::pathWithIdPattern($path), [
+            register_rest_route($namespace, static::pathWithIdPattern($path), [
                 'methods' => 'PUT',
                 'permission_callback' => static::permissionCallback($permissions),
                 'callback' => fn ($r) => $this->putBook($r)
+            ]);
+
+            register_rest_route($namespace, static::pathWithIdPattern($path), [
+                'methods' => 'DELETE',
+                'permission_callback' => static::permissionCallback($permissions),
+                'callback' => fn ($r) => $this->deleteBook($r)
             ]);
         }
 
@@ -91,12 +97,12 @@ namespace KarsonJo\BookPost\Route {
              */
             if (
                 isset($queryVars[static::FORCE_CREATE_BOOK_QUERY_KEY]) && filter_var($queryVars[static::FORCE_CREATE_BOOK_QUERY_KEY], FILTER_VALIDATE_BOOLEAN)
-                || BookQuery::bookSimilarMatch($bookJson['title'], $bookJson['author'], 0, 0) === null
+                || BookQuery::bookSimilarMatch($bookJson['title'], $bookJson['author']['name'], 0, 0) === null
             ) {
-                // 给定的数据是否存在至少一个卷
-                if (empty($bookJson['volumes'])) {
+                // 给定的数据是否有卷节点
+                if (!isset($bookJson['volumes'])) {
                     return new WP_REST_Response([
-                        'message' => 'cannot create book due to missing / empty field: volumes',
+                        'message' => 'cannot create book due to missing field: volumes',
                         'error' => static::getErrorMessage(QueryException::fieldInvalid('book volumes empty'))
                     ], 422);
                 }
@@ -113,7 +119,7 @@ namespace KarsonJo\BookPost\Route {
                         201,
                         ['Location' => rest_url("$namespace/$path/$bookId")]
                     );
-                } catch (Exception $e) {
+                } catch (Throwable $e) {
                     return new WP_REST_Response([
                         'message' => 'failed due to insert error',
                         'error' => static::getErrorMessage($e)
@@ -137,8 +143,8 @@ namespace KarsonJo\BookPost\Route {
             /**
              * book match
              */
-            if (isset($request['title']) || isset($request['author'])) {
-                $book = BookQuery::bookSimilarMatch($request['title'], $request['author'] ?? null);
+            if (isset($request['title']) || isset($request['author']['name'])) {
+                $book = BookQuery::bookSimilarMatch($request['title'], $request['author']['name'] ?? null, 0, 0);
                 if ($book)
                     return new WP_REST_Response([static::bookToOutputResult($book)]);
                 else
@@ -188,6 +194,17 @@ namespace KarsonJo\BookPost\Route {
             }
         }
 
+        protected function deleteBook(WP_REST_Request $request)
+        {
+            
+            $result = BookQuery::deleteBook(intval($request['bookId']));
+            if ($result)
+                return new WP_REST_Response(['message' => __('successfully-deleted-msg', 'NovelCabinet')]);
+            else if ($result === null)
+                return new WP_REST_Response(['message' => __('delete-failed-msg', 'NovelCabinet')], 404);
+            else
+                return new WP_REST_Response(['message' => __('delete-failed-msg', 'NovelCabinet')], 422);
+        }
 
 
 
@@ -341,9 +358,12 @@ namespace KarsonJo\BookPost\Route {
          * @param Book $book 
          * @return array 
          */
-        protected static function bookToOutputResult(Book $book): array
+        protected static function bookToOutputResult(?Book $book): array
         {
+            if ($book == null)
+                return [];
             $bookInfo = [
+                'id' => $book->ID,
                 'title' => $book->title,
                 'excerpt' => $book->excerpt,
                 'author' => [
@@ -360,61 +380,61 @@ namespace KarsonJo\BookPost\Route {
         }
 
 
-        protected static function bookSimilarMatch(string $keywordTitle, ?string $keywordAuthor = null, $titleThreshold = 2, $authorThreshold = 2): ?Book
-        {
-            // 必须指定title
-            if (!$keywordTitle)
-                return null;
+        // protected static function bookSimilarMatch(string $keywordTitle, ?string $keywordAuthor = null, $titleThreshold = 2, $authorThreshold = 2): ?Book
+        // {
+        //     // 必须指定title
+        //     if (!$keywordTitle)
+        //         return null;
 
-            /**
-             * 精准匹配title，模糊匹配author
-             */
-            $books = BookQuery::getBooks(['post_title' => $keywordTitle]);
+        //     /**
+        //      * 精准匹配title，模糊匹配author
+        //      */
+        //     $books = BookQuery::getBooks(['post_title' => $keywordTitle]);
 
-            if (count($books) > 0) {
-                /**
-                 * 书名有匹配，一定会返回一本
-                 * 如果有多本，返回作者名最相似的
-                 * 如果没给定作者名，那摆烂返回第一本
-                 */
-                if (!$keywordAuthor)
-                    return $books[0];
+        //     if (count($books) > 0) {
+        //         /**
+        //          * 书名有匹配，一定会返回一本
+        //          * 如果有多本，返回作者名最相似的
+        //          * 如果没给定作者名，那摆烂返回第一本
+        //          */
+        //         if (!$keywordAuthor)
+        //             return $books[0];
 
-                [$book, $value] = ArrayHelper::minBy(
-                    $books,
-                    fn (Book $book) => StringAlgorithms::levenshteinWithThreshold($book->authorLogin, $keywordAuthor, $authorThreshold, PHP_INT_MAX),
-                    0
-                );
+        //         [$book, $value] = ArrayHelper::minBy(
+        //             $books,
+        //             fn (Book $book) => StringAlgorithms::levenshteinWithThreshold($book->authorLogin, $keywordAuthor, $authorThreshold, PHP_INT_MAX),
+        //             0
+        //         );
 
-                return $book;
-            }
+        //         return $book;
+        //     }
 
-            /**
-             * 精准匹配author，模糊匹配title
-             */
-            if ($keywordAuthor) {
-                $authorId = AuthorQuery::getAuthorID($keywordAuthor);
-                if ($authorId) {
-                    $books = BookQuery::getBooks(['post_author' => $authorId]);
-                    if (count($books) > 0) {
-                        /**
-                         * 作者名有匹配，不一定就返回书本
-                         * 返回书名误差最小，且在阈值之内的一本
-                         */
-                        [$book, $value] = ArrayHelper::minBy(
-                            $books,
-                            fn (Book $book) => StringAlgorithms::levenshteinWithThreshold($book->title, $keywordTitle, $titleThreshold, PHP_INT_MAX),
-                            0
-                        );
+        //     /**
+        //      * 精准匹配author，模糊匹配title
+        //      */
+        //     if ($keywordAuthor) {
+        //         $authorId = AuthorQuery::getAuthorID($keywordAuthor);
+        //         if ($authorId) {
+        //             $books = BookQuery::getBooks(['post_author' => $authorId]);
+        //             if (count($books) > 0) {
+        //                 /**
+        //                  * 作者名有匹配，不一定就返回书本
+        //                  * 返回书名误差最小，且在阈值之内的一本
+        //                  */
+        //                 [$book, $value] = ArrayHelper::minBy(
+        //                     $books,
+        //                     fn (Book $book) => StringAlgorithms::levenshteinWithThreshold($book->title, $keywordTitle, $titleThreshold, PHP_INT_MAX),
+        //                     0
+        //                 );
 
-                        if ($value <= $titleThreshold)
-                            return $book;
-                    }
-                }
-            }
+        //                 if ($value <= $titleThreshold)
+        //                     return $book;
+        //             }
+        //         }
+        //     }
 
-            return null;
-        }
+        //     return null;
+        // }
 
         // protected static function getErrorMessage(WP_Error|Exception|array $error): array
         // {

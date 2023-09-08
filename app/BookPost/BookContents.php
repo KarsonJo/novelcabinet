@@ -72,6 +72,7 @@ namespace KarsonJo\BookPost {
                 $status = null;
 
             $results = BookQuery::bookHierarchy($book, $status);
+            $this->contents[$book] = []; //书结点
 
             if (!$results)
                 return false;
@@ -84,7 +85,6 @@ namespace KarsonJo\BookPost {
                 ->withoutPostContent()
                 ->cache();
 
-            $this->contents[$book] = []; //书结点
             foreach ($results as $result) {
                 if ($result->parent_id == $book && !array_key_exists($result->ID, $this->contents)) //是卷
                     $this->contents[$result->ID] = []; //新的卷结点
@@ -211,13 +211,15 @@ namespace KarsonJo\BookPost {
 
             if ($vkey < 0 || $ckey < 0)
                 return null;
-
+            print_r(1);
             if ($ckey == count($this->getVolumeChapters($vkey)) - 1) {
                 if ($vkey == count($this->getVolumes()) - 1)
                     return null; //没有了
                 $next_volume = $this->getVolumeChapters($vkey + 1);
                 return $next_volume[0]; //下一卷第一章
             }
+            print_r(2);
+
             return $this->getVolumeChapters($vkey)[$ckey + 1]; //这一卷下一章
         }
 

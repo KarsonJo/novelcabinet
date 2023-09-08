@@ -33,9 +33,11 @@ class BookChapter extends Composer
 
         $chapter = get_post();
         $book = BookQuery::rootPost($chapter);
-        $contents = new BookContents($book);
+        $contents = new BookContents($chapter);
         $prev_chapter = $contents->previousChapter();
         $next_chapter = $contents->nextChapter();
+        // print_r($contents);
+        // print_r($next_chapter);
         return [
             'contents' => $contents,
             'bookUrl' => get_permalink($book),

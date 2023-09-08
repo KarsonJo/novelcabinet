@@ -3,6 +3,7 @@
 namespace KarsonJo\BookPost\SqlQuery {
 
     use Exception;
+    use Illuminate\Database\Events\QueryExecuted;
     use KarsonJo\BookPost\Book;
     use KarsonJo\BookPost\BookContents;
     use KarsonJo\BookPost\BookMeta\MetaManager;
@@ -12,6 +13,7 @@ namespace KarsonJo\BookPost\SqlQuery {
     use KarsonJo\Utilities\PostCache\CacheHelpers;
     use NovelCabinet\Utilities\ArrayHelper;
     use TenQuality\WP\Database\QueryBuilder;
+    use Throwable;
     use WP_Error;
     use WP_Post;
     use WP_Query;
@@ -251,7 +253,7 @@ namespace KarsonJo\BookPost\SqlQuery {
         /**
          * 查找“相似”书籍
          * 精确匹配书籍，模糊匹配作者
-         * 精确匹配作者，模糊匹配书籍
+         * ~~精确匹配作者，模糊匹配书籍~~
          * @param string $keywordTitle 书籍名称
          * @param null|string $keywordAuthor 作者用户名，忽略则完全不考虑作者名匹配
          * @param int $titleThreshold 模糊匹配标题时，允许的误差
@@ -270,7 +272,6 @@ namespace KarsonJo\BookPost\SqlQuery {
              * 精准匹配title，模糊匹配author
              */
             $books = BookQuery::getBooks(['post_title' => $keywordTitle]);
-
             if (count($books) > 0) {
                 /**
                  * 书名有匹配，一定会返回一本
@@ -282,7 +283,7 @@ namespace KarsonJo\BookPost\SqlQuery {
 
                 [$book, $value] = ArrayHelper::minBy(
                     $books,
-                    fn (Book $book) => StringAlgorithms::levenshteinWithThreshold($book->authorLogin, $keywordAuthor, $authorThreshold, PHP_INT_MAX),
+                    fn (Book $book) => StringAlgorithms::levenshteinWithThreshold($book->author, $keywordAuthor, $authorThreshold, PHP_INT_MAX),
                     0
                 );
 
@@ -292,24 +293,24 @@ namespace KarsonJo\BookPost\SqlQuery {
             /**
              * 精准匹配author，模糊匹配title
              */
-            if ($keywordAuthor && $titleThreshold > 0) {
-                $authorId = AuthorQuery::getAuthorID($keywordAuthor);
-                $books = BookQuery::getBooks(['post_author' => $authorId]);
-                if (count($books) > 0) {
-                    /**
-                     * 作者名有匹配，不一定就返回书本
-                     * 返回书名误差最小，且在阈值之内的一本
-                     */
-                    [$book, $value] = ArrayHelper::minBy(
-                        $books,
-                        fn (Book $book) => StringAlgorithms::levenshteinWithThreshold($book->title, $keywordTitle, $titleThreshold, PHP_INT_MAX),
-                        0
-                    );
+            // if ($keywordAuthor && $titleThreshold > 0) {
+            //     $authorId = AuthorQuery::getAuthorID($keywordAuthor);
+            //     $books = BookQuery::getBooks(['post_author' => $authorId]);
+            //     if (count($books) > 0) {
+            //         /**
+            //          * 作者名有匹配，不一定就返回书本
+            //          * 返回书名误差最小，且在阈值之内的一本
+            //          */
+            //         [$book, $value] = ArrayHelper::minBy(
+            //             $books,
+            //             fn (Book $book) => StringAlgorithms::levenshteinWithThreshold($book->title, $keywordTitle, $titleThreshold, PHP_INT_MAX),
+            //             0
+            //         );
 
-                    if ($value <= $titleThreshold)
-                        return $book;
-                }
-            }
+            //         if ($value <= $titleThreshold)
+            //             return $book;
+            //     }
+            // }
 
             return null;
         }
@@ -368,18 +369,19 @@ namespace KarsonJo\BookPost\SqlQuery {
             global $wpdb;
             try {
                 $wpdb->query('START TRANSACTION;');
-
-                $authorId = AuthorQuery::getAuthorID($book['author'], true);
+                if (empty($book['author']['login']))
+                    throw QueryException::fieldInvalid("author login is mepty");
+                $authorId = AuthorQuery::getAuthorID($book['author']['login'], true, $book['author']['name'] ?? null);
                 // book
                 $newBookId = wp_insert_post([
                     'post_title' => $book['title'],
-                    'post_excerpt' => $book['excerpt'],
+                    'post_excerpt' => $book['excerpt'] ?? '',
                     'post_author' => $authorId,
                     'post_type' => BookPost::KBP_BOOK,
                     'tax_input' => [
-                        BookPost::KBP_BOOK_GENRE => $book['genres']
+                        BookPost::KBP_BOOK_GENRE => $book['genres'] ?? []
                     ],
-                    'tags_input' => $book['tags'],
+                    'tags_input' => $book['tags'] ?? [],
                     'post_status' => 'publish',
                 ], true);
 
@@ -394,16 +396,7 @@ namespace KarsonJo\BookPost\SqlQuery {
                 $volumeNameIdMap = [];
                 $volumes = $book['volumes'];
                 foreach ($volumes as $volume) {
-                    $newVolumeId = wp_insert_post([
-                        'post_title' => $volume['title'],
-                        'post_parent' => $newBookId,
-                        'post_author' => $authorId,
-                        'post_type' => BookPost::KBP_BOOK,
-                        'post_status' => 'publish',
-                    ], true);
-
-                    static::assertWpdbResult($newVolumeId);
-
+                    $newVolumeId = static::_insertVolume($authorId, $newBookId, $volume['title']);
                     $volumeNameIdMap[$volume['title']] = $newVolumeId;
                 }
 
@@ -429,32 +422,38 @@ namespace KarsonJo\BookPost\SqlQuery {
              * 按批插入章节
              */
             try {
-                $batchSize = 100;
+                // $batchSize = 100;
+                // foreach ($volumes as $volume) {
+                //     $batches = array_chunk($volume['chapters'], $batchSize);
+                //     foreach ($batches as $chapterBatch) {
+                //         $wpdb->query('START TRANSACTION;');
+                //         foreach ($chapterBatch as $chapter) {
+                //             static::_insertChapter($authorId, $volumeNameIdMap[$volume['title']], $chapter['title'], $chapter['content'] ?? '');
+                //         }
+                //         // print_r("\t\tinsrted " . count($chapterBatch) . " chapters: {$stepWatch->getElapsedStringAndReset()}\n");
+                //         // $report['steps'][] = "[chapters] " . count($chapterBatch) . " insrted: {$stepWatch->getElapsedStringAndReset()}";
+                //         $logger->addLog('steps', 'steps', 'chapters', count($chapterBatch) . ' inserted');
+
+
+                //         $wpdb->query('COMMIT;');
+                //         // $report['steps'][] = "[commit] above: {$stepWatch->getElapsedStringAndReset()}";
+                //         $logger->addLog('steps', 'steps',  'commit', 'above');
+                //     }
+                // }
+
                 foreach ($volumes as $volume) {
-                    $batches = array_chunk($volume['chapters'], $batchSize);
-                    foreach ($batches as $chapterBatch) {
-                        $wpdb->query('START TRANSACTION;');
-                        foreach ($chapterBatch as $chapter) {
-                            $newChapterId = wp_insert_post([
-                                'post_title' => $chapter['title'],
-                                'post_content' => $chapter['content'] ?? '',
-                                'post_parent' => $volumeNameIdMap[$volume['title']],
-                                'post_author' => $authorId,
-                                'post_type' => BookPost::KBP_BOOK,
-                                'post_status' => 'publish',
-                            ], true);
-
-                            static::assertWpdbResult($newChapterId);
+                    static::_insertChapters(
+                        $authorId,
+                        $volumeNameIdMap[$volume['title']],
+                        $volume['chapters'],
+                        100,
+                        fn ()  => $wpdb->query('START TRANSACTION;'),
+                        function ($chapterBatch) use ($wpdb, $logger) {
+                            $logger->addLog('steps', 'steps', 'chapters', count($chapterBatch) . ' inserted');
+                            $wpdb->query('COMMIT;');
+                            $logger->addLog('steps', 'steps',  'commit', 'above');
                         }
-                        // print_r("\t\tinsrted " . count($chapterBatch) . " chapters: {$stepWatch->getElapsedStringAndReset()}\n");
-                        // $report['steps'][] = "[chapters] " . count($chapterBatch) . " insrted: {$stepWatch->getElapsedStringAndReset()}";
-                        $logger->addLog('steps', 'steps', 'chapters', count($chapterBatch) . ' inserted');
-
-
-                        $wpdb->query('COMMIT;');
-                        // $report['steps'][] = "[commit] above: {$stepWatch->getElapsedStringAndReset()}";
-                        $logger->addLog('steps', 'steps',  'commit', 'above');
-                    }
+                    );
                 }
             } catch (Exception $e) {
                 $wpdb->query('ROLLBACK;');
@@ -486,192 +485,6 @@ namespace KarsonJo\BookPost\SqlQuery {
             // return [$newBookId, $report];
             return [$newBookId, $logger->getLog()];
         }
-
-        /**
-         * 更新整本书
-         * todo: 目前只是雏形，只会更新现有内容+append新增内容
-         * 对于删除内容，目前只是摆烂
-         * @return void 
-         */
-        // public static function updateBook($book, Book $original)
-        // {
-        //     wp_defer_term_counting(true);
-        //     wp_defer_comment_counting(true);
-
-        //     // 截胡slug的查找，直接给定一个本机唯一id
-        //     $uniSlug = fn ($override_slug) => $override_slug ?? uniqid();
-        //     add_filter('pre_wp_unique_post_slug', $uniSlug);
-
-        //     // 不知道什么鬼用的pingback
-        //     remove_action('do_pings', 'do_all_pings', 10);
-
-        //     //无限时间
-        //     $originalTimeLimit = ini_get('max_execution_time');
-        //     set_time_limit(9999);
-
-        //     //书meta
-        //     //卷meta
-        //     //目录顺序
-        //     /**
-        //      * 插入书和卷
-        //      */
-        //     global $wpdb;
-        //     try {
-        //         $wpdb->query('START TRANSACTION;');
-
-        //         // $authorId = AuthorQuery::getAuthorID($book['author']);
-        //         // book
-        //         $authorId = $original->authorId;
-        //         $bookMeta = [];
-
-        //         if (!empty($book['title']) && $book['title'] != $original->title)
-        //             $bookMeta['post_title'] = $book['title'];
-
-        //         if (!empty($book['excerpt']) && $book['excerpt'] != $original->excerpt)
-        //             $bookMeta['post_excerpt'] = $book['excerpt'];
-
-        //         if (!empty($book['genres'])) {
-        //             $newGenres = $book['genres'];
-        //             $oldGenres = array_map(fn (WP_Term $wp_term) => $wp_term->term_id, $original->genres);
-        //             $merged = array_merge($newGenres, $oldGenres);
-        //             if (!ArrayHelper::arrayValuesEqual($oldGenres, $newGenres))
-        //                 $bookMeta['tax_input'] = [BookPost::KBP_BOOK_GENRE => $merged];
-        //         }
-
-        //         if (!empty($book['tags'])) {
-        //             $newTags = $book['tags'];
-        //             $oldTags = array_map(fn (WP_Term $wp_term) => $wp_term->name, $original->tags);
-        //             $merged = array_merge($newTags, $oldTags);
-        //             if (!ArrayHelper::arrayValuesEqual($oldTags, $newTags))
-        //                 $bookMeta['tags_input'] = $merged;
-        //         }
-
-        //         if ($bookMeta) {
-        //             $bookMeta['ID'] = $original->ID;
-        //             $result = wp_update_post($bookMeta, true);
-        //             static::assertWpdbResult($result);
-        //         }
-
-
-        //         // volumes
-        //         /**
-        //          * 更新volumes
-        //          * 给了volume项默认即需要更新
-        //          */
-        //         $originalContents = $original->contents;
-        //         $volumeNameIdMap = [];
-        //         $volumes = $book['volumes'];
-        //         foreach ($volumes as $volume) {
-        //             if (!empty($volume['title'])) {
-        //                 // 查找相似名称
-        //                 [$volumeId, $similarity] = $originalContents->idBySimilarName('volume', $volume['title'], 2);
-
-        //                 // 存在相似
-        //                 if ($volumeId) {
-        //                     // 且不同：更新
-        //                     if ($similarity > 0) {
-        //                         $volumeId = wp_update_post([
-        //                             'ID' => $volumeId,
-        //                             'post_title' => $volume['title']
-        //                         ], true);
-        //                     }
-        //                     // 否则，不需要做任何事
-        //                 }
-        //                 // 不存在：插入
-        //                 else {
-        //                     $volumeId = wp_insert_post([
-        //                         'post_title' => $volume['title'],
-        //                         'post_parent' => $original->ID,
-        //                         'post_author' => $authorId,
-        //                         'post_type' => BookPost::KBP_BOOK,
-        //                         'post_status' => 'publish',
-        //                     ], true);
-        //                 }
-        //                 static::assertWpdbResult($volumeId);
-
-        //                 $volumeNameIdMap[$volume['title']] = $volumeId;
-        //             }
-        //         }
-
-        //         $wpdb->query('COMMIT;');
-        //     } catch (Exception $e) {
-        //         $wpdb->query('ROLLBACK;');
-        //         throw $e;
-        //     }
-
-        //     /**
-        //      * 按批更新
-        //      */
-        //     try {
-        //         $batchSize = 100;
-        //         foreach ($volumes as $volume) {
-        //             $batches = array_chunk($volume['chapters'], $batchSize);
-        //             foreach ($batches as $chapterBatch) {
-        //                 $wpdb->query('START TRANSACTION;');
-
-        //                 foreach ($chapterBatch as $chapter) {
-        //                     if (!empty($chapter['title'])) {
-
-        //                         [$chapterId, $similarity] = $originalContents->idBySimilarName('chapter', $chapter['title'], 2);
-
-        //                         // 存在相似
-        //                         if ($chapterId) {
-        //                             $chapterData = [];
-
-        //                             // 更新标题
-        //                             if ($similarity > 0)
-        //                                 $chapterData['post_title'] = $chapter['title'];
-        //                             // 更新内容
-        //                             if (!empty($chapter['content']))
-        //                                 $chapterData['post_content'] = $chapter['content'];
-        //                             // 更新爹
-        //                             $originalParent = $originalContents->contentsItemById($chapterId)->post_parent;
-        //                             $newParent = $volumeNameIdMap[$volume['title']];
-        //                             if (!empty($newParent) && $newParent != $originalParent)
-        //                                 $chapterData['post_parent'] = $newParent;
-
-        //                             if ($chapterData) {
-        //                                 $chapterData['ID'] = $chapterId;
-        //                                 $chapterId = wp_update_post($chapterData, true);
-        //                             }
-
-        //                             // 否则，不需要做任何事
-        //                         }
-        //                         // 不存在：插入
-        //                         else {
-        //                             $chapterId = wp_insert_post([
-        //                                 'post_title' => $chapter['title'],
-        //                                 'post_content' => $chapter['content'] ?? '',
-        //                                 'post_parent' => $volumeNameIdMap[$volume['title']],
-        //                                 'post_author' => $authorId,
-        //                                 'post_type' => BookPost::KBP_BOOK,
-        //                                 'post_status' => 'publish',
-        //                             ], true);
-        //                         }
-        //                         static::assertWpdbResult($chapterId);
-        //                     }
-        //                 }
-
-        //                 $wpdb->query('COMMIT;');
-        //             }
-        //         }
-        //     } catch (Exception $e) {
-        //         $wpdb->query('ROLLBACK;');
-        //         throw $e;
-        //     }
-
-        //     /**
-        //      * 恢复原来设定
-        //      */
-        //     wp_defer_term_counting(false);
-        //     wp_defer_comment_counting(false);
-
-        //     remove_filter('pre_wp_unique_post_slug', $uniSlug);
-
-        //     add_action('do_pings', 'do_all_pings', 10, 0);
-
-        //     set_time_limit($originalTimeLimit);
-        // }
 
         /**
          * 将整本书更新至指定状态
@@ -1044,6 +857,108 @@ namespace KarsonJo\BookPost\SqlQuery {
             return $logger->getLog();
         }
 
+        public static function deleteBook(int $id) : WP_Post|false|null
+        {
+            // 删除根节点，自动级联删除
+            // 主要是开个transaction
+            try {
+                global $wpdb;
+                $wpdb->query('START TRANSACTION;');
+                $result = wp_delete_post($id, true);
+                static::assertWpdbResult($result);
+                $wpdb->query('COMMIT;');
+            }
+            catch (Throwable $e) {
+                $wpdb->query('ROLLBACK;');
+                error_log($e->getMessage());
+                return false;
+            }
+            return $result;
+        }
+
+        public static function createVolume(Book $book, string $title): int
+        {
+            return static::_insertVolume($book->authorId, $book->ID, $title);
+        }
+
+        protected static function _insertVolume(int|string $authorId, int|string $bookId, string $title): int
+        {
+            $newVolumeId = wp_insert_post([
+                'post_title' => $title,
+                'post_parent' => $bookId,
+                'post_author' => $authorId,
+                'post_type' => BookPost::KBP_BOOK,
+                'post_status' => 'publish',
+            ], true);
+            static::assertWpdbResult($newVolumeId);
+            return $newVolumeId;
+        }
+
+        public static function createChapters(Book $book, int|string $volumeId, array $chapterData, int $batchSize = 0)
+        {
+            if (!array_is_list($chapterData))
+                $chapterData = [$chapterData];
+
+            $logger = new Logger();
+            $logger->registerContext("steps");
+            $logger->registerContext("summary");
+            $logger->resetContexts();
+
+            global $wpdb;
+            try {
+                static::_insertChapters(
+                    $book->authorId,
+                    $volumeId,
+                    $chapterData,
+                    $batchSize,
+                    fn () => $wpdb->query('START TRANSACTION;'),
+                    function ($chapterBatch) use ($wpdb, $logger) {
+                        $logger->addLog('steps', 'steps', 'chapters', count($chapterBatch) . ' inserted');
+                        $wpdb->query('COMMIT;');
+                        $logger->addLog('steps', 'steps',  'commit', 'above');
+                    }
+                );
+            } catch (Exception $e) {
+                $wpdb->query('ROLLBACK;');
+                throw $e;
+            }
+
+            $logger->addLog('summary', 'summary', 'progress', 'inserted chapters');
+
+            return $logger->getLog();
+        }
+
+        protected static function _insertChapters($authorId, $volumeId, $chapterData, int $batchSize = 0, ?callable $batchStart = null, ?callable $batchEnd = null)
+        {
+            if ($batchSize <= 0)
+                $batchSize = count($chapterData);
+
+            ArrayHelper::foreach_batch(
+                $chapterData,
+                $batchSize,
+                function ($chapter) use ($authorId, $volumeId) {
+                    // print("insert $authorId, $volumeId {$chapter['title']}");
+                    static::_insertChapter($authorId, $volumeId, $chapter['title'], $chapter['content'] ?? '');
+                },
+                $batchStart,
+                $batchEnd
+            );
+        }
+
+        protected static function _insertChapter(int|string $authorId, int|string $volumeId, string $title, string $content): int
+        {
+            $newChapterId = wp_insert_post([
+                'post_title' => $title,
+                'post_content' => $content,
+                'post_parent' => $volumeId,
+                'post_author' => $authorId,
+                'post_type' => BookPost::KBP_BOOK,
+                'post_status' => 'publish',
+            ], true);
+            static::assertWpdbResult($newChapterId);
+            return $newChapterId;
+        }
+
         /**
          * 删除书本数据类型时，会级联删除所有书本
          * todo: 删除会把文章先查出来，有点傻逼
@@ -1106,9 +1021,9 @@ namespace KarsonJo\BookPost\SqlQuery {
         private static function cascadeDeleteBody(WP_Post $post)
         {
             if (static::$recursionDepth < 0)
-                throw new Exception();
-            else
-                static::$recursionDepth -= 1;
+                throw new Exception('maximum recursive depth(1000) reached');
+
+            static::$recursionDepth -= 1;
             // 获取子文章列表
             $child_posts = get_children([
                 'post_parent' => $post->ID,
@@ -1132,6 +1047,7 @@ namespace KarsonJo\BookPost\SqlQuery {
             $result = wp_delete_post($post->ID, true);
             static::assertWpdbResult($result);
 
+            static::$recursionDepth += 1;
             // if ($result instanceof WP_Post)
             //     error_log("deleted: $result->ID");
             // else
@@ -1436,7 +1352,7 @@ namespace KarsonJo\BookPost\SqlQuery {
                 ->from('posts posts')
                 ->where(['post_parent' => $book_id], ['post_type' => BookPost::KBP_BOOK])
                 ->order_by('menu_order', 'DESC')
-                ->order_by('post_title', 'DESC')
+                ->order_by('ID', 'DESC')
                 ->value();
 
             if (empty($result))

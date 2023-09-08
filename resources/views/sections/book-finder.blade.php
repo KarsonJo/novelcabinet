@@ -1,7 +1,7 @@
 <div class="tag.book-filter flex min-h-screen mx-xfit-lg gap-5 my-5 sm:my-8">
     {{-- the filter --}}
     {{-- background --}}
-    <section class="tag.top-bar z-50 lg:w-80 max-lg:fixed">
+    <section class="tag.top-bar z-50 lg:w-80 max-lg:fixed shrink-0">
         <input class="hidden peer" type="checkbox" value="checked" id="filter-state">
         {{-- filte toggle btn --}}
         <label class="tag.filter-toggle fixed bottom-4 right-4 w-12 h-12 rounded-full bg-theme-bg1 cursor-pointer lg:hidden" for="filter-state">
