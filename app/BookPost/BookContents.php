@@ -71,25 +71,27 @@ namespace KarsonJo\BookPost {
             else
                 $status = null;
 
-            $results = BookQuery::bookHierarchy($book, $status);
+            $results = BookQuery::getBookHierarchy($book, $status);
             $this->contents[$book] = []; //书结点
 
             if (!$results)
-                return false;
+                return;
+
+            $this->contents = $results;
 
             // 缓存文章基本信息
-            $ids = array_map(fn ($result) => $result->ID, $results);
+            $ids = array_map(fn ($result) => $result->ID, array_merge(...array_values($results)));
 
             CacheBuilder::create()
                 ->cachePosts($ids)
                 ->withoutPostContent()
                 ->cache();
 
-            foreach ($results as $result) {
-                if ($result->parent_id == $book && !array_key_exists($result->ID, $this->contents)) //是卷
-                    $this->contents[$result->ID] = []; //新的卷结点
-                $this->contents[$result->parent_id][] = new BookContentsItem($result); //加到最后
-            }
+            // 构造为BookContentsItem对象，是为了兼容老代码？还是为了强类型化？我不到啊，随便吧
+            foreach ($this->contents as $key1 => $subPostList)
+                foreach ($subPostList as $key2 => $subPost)
+                    $this->contents[$key1][$key2] = new BookContentsItem($subPost);
+
 
             $this->setActiveChapter($post);
         }

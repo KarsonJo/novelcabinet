@@ -127,11 +127,15 @@ namespace KarsonJo\BookPost\SqlQuery {
         /**
          * 以层次结构返回一本书的所有文章
          * 包含的字段：爷id，爹id, id, post标题(parent2_id, parent_id, ID, post_title)
+         * 返回的数组结构
+         * [书1] => [卷1, 卷2],
+         * [卷1] => [章1, 章2],
+         * [卷2] => [章3, 章4],
          * @param WP_Post|int $book 
          * @param string[]|string|null $status 包含的wordpress文章状态
-         * @return object[]|false 
+         * @return object[][]|false 
          */
-        public static function bookHierarchy(WP_Post|int $book, array|string|null $status = 'publish'): array|false
+        public static function getBookHierarchy(WP_Post|int $book, array|string|null $status = 'publish'): array|false
         {
             if ($book instanceof WP_Post)
                 $book = $book->ID;
@@ -139,54 +143,158 @@ namespace KarsonJo\BookPost\SqlQuery {
             if (!is_numeric($book))
                 return false;
 
-            // if (is_array($status))
-            //     $status = implode(", ")
-
-            $query = QueryBuilder::create()
-                ->select('p2.post_parent as parent2_id')
-                ->select('p1.post_parent as parent_id')
-                ->select('p1.ID')
-                ->select('p1.post_title')
-                ->from('posts p1')
-                ->join('posts p2', [['key_a' => 'p2.ID', 'key_b' => 'p1.post_parent']])
-                ->where([
-                    'raw' => "$book in (p1.post_parent, p2.post_parent)",
-                    'p1.post_type' => BookPost::KBP_BOOK,
-                ])
-                ->order_by('p2.post_parent')
-                ->order_by('p1.post_parent')
-                ->order_by('p1.menu_order')
-                ->order_by('p1.ID');
+            global $wpdb;
 
             if (is_array($status))
-                $query->where(['p1.post_status' => ['operator' => 'IN', 'value' => $status]]);
+                $status_clause = 'in (' . implode(',', array_map(fn ($item) => $wpdb->prepare('%s', $item), $status)) . ')';
+            // $query->where(['p1.post_status' => ['operator' => 'IN', 'value' => $status]]);
             else if (is_string($status))
-                $query->where(['p1.post_status' => $status]);
+                $status_clause = '= ' . $wpdb->prepare('%s', $status);
+            // $query->where(['p1.post_status' => $status]);
             else
-                $query->where(['p1.post_status' => ['operator' => 'IN', 'value' => ['draft', 'publish', 'trash', 'future', 'pending', 'private']]]);
+                $status_clause = 'in ("draft", "publish", "trash", "future", "pending", "private")';
+            // $query->where(['p1.post_status' => ['operator' => 'IN', 'value' => ['draft', 'publish', 'trash', 'future', 'pending', 'private']]]);
 
+            // print_r(microtime());
+            // print_r("</br>");
+            // print_r(microtime());
+            // print_r("</br>");
+            // print_r(microtime());
+            // print_r("</br>");
+            // print_r($wpdb->get_var("SELECT version()"));
+            // print_r("</br>");
+            // print_r(microtime());
+            // print_r("</br>");
+            // print_r("</br>");
+            $result = static::getBookHierarchyRecursive($book, $status_clause);
+            // print_r(microtime());
+            // print_r("</br>");
+            if ($result === false)
+                $result = static::getBookHierarchyCompatible($book, $status_clause);
+            // print_r(microtime());
+            // print_r("</br>");
+            return $result;
+            // pass
 
-            // global $wpdb;
-            // $table_name = $wpdb->prefix . 'posts';
-            // // A sql query to return all post titles
-            // $results = $wpdb->get_results($wpdb->prepare("
-            // select      p2.post_parent as parent2_id,
-            //             p1.post_parent as parent_id,
-            //             p1.ID,
-            //             p1.post_title
-            // from        $table_name p1
-            // left join   $table_name p2 on p2.ID = p1.post_parent 
-            // where       %d in (p1.post_parent, p2.post_parent) 
-            //             and p1.post_status = %s
-            //             and p1.post_type = %s
-            // order by    parent2_id, parent_id, p1.menu_order, p1.ID;", $book, $status, BookPost::KBP_BOOK));
+        }
 
-            $results = $query->get();
+        /**
+         * 兼容所有MySQL版本的获取层次结构函数
+         * @param WP_Post|int $book 
+         * @param array|string|null $status 
+         * @return array|false 
+         */
+        private static function getBookHierarchyCompatible(WP_Post|int $book, string $status_clause): array|false
+        {
+            // $query = QueryBuilder::create()
+            //     ->select('p2.post_parent as parent2_id')
+            //     ->select('p1.post_parent as parent_id')
+            //     ->select('p1.ID')
+            //     ->select('p1.post_title')
+            //     ->from('posts p1')
+            //     ->join('posts p2', [['key_a' => 'p2.ID', 'key_b' => 'p1.post_parent']])
+            //     ->where([
+            //         'raw' => "$book in (p1.post_parent, p2.post_parent)",
+            //         'p1.post_type' => BookPost::KBP_BOOK,
+            //     ])
+            //     ->order_by('p2.post_parent')
+            //     ->order_by('p1.post_parent')
+            //     ->order_by('p1.menu_order')
+            //     ->order_by('p1.ID');
 
-            if (!$results)
+            // if (is_array($status))
+            //     $query->where(['p1.post_status' => ['operator' => 'IN', 'value' => $status]]);
+            // else if (is_string($status))
+            //     $query->where(['p1.post_status' => $status]);
+            // else
+            //     $query->where(['p1.post_status' => ['operator' => 'IN', 'value' => ['draft', 'publish', 'trash', 'future', 'pending', 'private']]]);
+
+            // $results = $query->get();
+
+            global $wpdb;
+
+            $table_name = $wpdb->prefix . 'posts';
+            // A sql query to return all post titles
+            $results = $wpdb->get_results($wpdb->prepare("
+            select      p2.post_parent as post_parent2,
+                        p1.post_parent as post_parent,
+                        p1.ID,
+                        p1.post_title
+            from        $table_name p1
+            join        $table_name p2
+            force index (post_parent)
+            on p2.ID = p1.post_parent 
+            where       %d in (p1.post_parent, p2.post_parent) 
+                        and p1.post_status $status_clause
+                        and p1.post_type = %s
+            order by    post_parent2, post_parent, p1.menu_order, p1.ID;", $book, BookPost::KBP_BOOK));
+
+            if ($wpdb->last_error)
                 return false;
+            // static::assertWpdbResult($results);
+            // if (!$results)
+            // return false;
 
-            return $results;
+            $contents[$book] = []; //书结点
+
+            foreach ($results as $result) {
+                if ($result->post_parent == $book && !array_key_exists($result->ID, $contents)) //是卷
+                    $contents[$result->ID] = []; //新的卷结点
+                $contents[$result->post_parent][] = $result; //加到最后
+            }
+            return $contents;
+        }
+
+        /**
+         * 使用MySQL 8.0新增的递归查询
+         * @param WP_Post|int $book 
+         * @param array|string|null $status 
+         * @return array|false 
+         */
+        private static function getBookHierarchyRecursive(WP_Post|int $book, string $status_clause): array|false
+        {
+            global $wpdb;
+
+            $table_name = $wpdb->prefix . 'posts';
+            $book_type = BookPost::KBP_BOOK;
+            $results = $wpdb->get_results($wpdb->prepare("
+            with recursive cte (ID, post_title, post_parent) as (
+                select      id,
+                            post_title,
+                            post_parent
+                from        $table_name
+                where       post_parent = %d
+                            and post_status $status_clause
+                            and post_type = $book_type
+                union all
+                select      p.ID,
+                            p.post_title,
+                            p.post_parent
+                from        $table_name p
+                inner join  cte
+                on          p.post_parent = cte.ID
+                where       post_status $status_clause
+                            and post_type = $book_type
+            )
+            select * from cte;", $book));
+            // print_r(123);
+            // print_r($results);
+            if ($wpdb->last_error)
+                return false;
+            // static::assertWpdbResult($results);
+            // if (!$results)
+            //     return false;
+
+            $contents[$book] = []; //书结点
+
+            foreach ($results as $result) {
+                if ($result->post_parent == $book && !array_key_exists($result->ID, $contents)) //是卷
+                    $contents[$result->ID] = []; //新的卷结点
+                $contents[$result->post_parent][] = $result; //加到最后
+            }
+            return $contents;
+
+            return false;
         }
 
         /**
@@ -198,10 +306,10 @@ namespace KarsonJo\BookPost\SqlQuery {
         protected static function assertWpdbResult($result)
         {
             global $wpdb;
-            if ($result === false)
-                throw QueryException::wpdbException($wpdb->last_error);
-            else if ($result instanceof WP_Error)
+            if ($result instanceof WP_Error)
                 throw QueryException::wpdbException($result->get_error_message());
+            else if ($result === false || $wpdb->last_error)
+                throw QueryException::wpdbException($wpdb->last_error);
         }
 
         /**
@@ -857,7 +965,7 @@ namespace KarsonJo\BookPost\SqlQuery {
             return $logger->getLog();
         }
 
-        public static function deleteBook(int $id) : WP_Post|false|null
+        public static function deleteBook(int $id): WP_Post|false|null
         {
             // 删除根节点，自动级联删除
             // 主要是开个transaction
@@ -867,8 +975,7 @@ namespace KarsonJo\BookPost\SqlQuery {
                 $result = wp_delete_post($id, true);
                 static::assertWpdbResult($result);
                 $wpdb->query('COMMIT;');
-            }
-            catch (Throwable $e) {
+            } catch (Throwable $e) {
                 $wpdb->query('ROLLBACK;');
                 error_log($e->getMessage());
                 return false;
@@ -1470,7 +1577,7 @@ namespace KarsonJo\BookPost\SqlQuery {
             if ($sanitize) {
                 // 确定项来自这本书
                 // 当作set用
-                $bookPostIds = array_flip(array_map(fn ($item) => $item->ID, static::bookHierarchy($bookId, null)));
+                $bookPostIds = array_flip(array_map(fn ($item) => $item->ID, static::getBookHierarchy($bookId, null)));
                 foreach ($idPairs as $id => $order)
                     if (!array_key_exists($id, $bookPostIds))
                         throw QueryException::fieldInvalid();
