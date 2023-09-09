@@ -265,7 +265,7 @@ namespace KarsonJo\BookPost\SqlQuery {
                 from        $table_name
                 where       post_parent = %d
                             and post_status $status_clause
-                            and post_type = $book_type
+                            and post_type = '$book_type'
                 union all
                 select      p.ID,
                             p.post_title,
@@ -274,7 +274,7 @@ namespace KarsonJo\BookPost\SqlQuery {
                 inner join  cte
                 on          p.post_parent = cte.ID
                 where       post_status $status_clause
-                            and post_type = $book_type
+                            and post_type = '$book_type'
             )
             select * from cte;", $book));
             // print_r(123);
