@@ -208,16 +208,17 @@ namespace KarsonJo\BookPost\Route {
 
 
 
-        public static function init($apiDomain = 'kbp', $apiVersion = 'v1')
-        {
-            $namespace = $apiDomain . '/' . $apiVersion;
+        // public static function init($apiDomain = 'kbp', $apiVersion = 'v1')
+        // {
+        //     $namespace = $apiDomain . '/' . $apiVersion;
 
-            add_action('rest_api_init', function () use ($namespace) {
-                static::allowLocalHttpAuth();
+        //     add_action('rest_api_init', function () use ($namespace) {
+        //         // print_r(123);
+        //         // static::allowLocalHttpAuth();
 
-                static::bookCoverRepresentation($namespace);
-            });
-        }
+        //         static::bookCoverRepresentation($namespace);
+        //     });
+        // }
 
 
         static function bookCoverRepresentation($namespace, $path = '/books/(?P<bookId>\d+)/cover')
@@ -346,12 +347,14 @@ namespace KarsonJo\BookPost\Route {
          * 允许本地环回地址通过http验证身份
          * @return void 
          */
-        static function allowLocalHttpAuth()
-        {
-            add_filter('wp_is_application_passwords_available', function (bool $available) {
-                return $available || $_SERVER['REMOTE_ADDR'] === '127.0.0.1';
-            });
-        }
+        // static function allowLocalHttpAuth()
+        // {
+        //     print_r(1);
+        //     add_filter('wp_is_application_passwords_available', function (bool $available) {
+        //         print_r($_SERVER['REMOTE_ADDR']);
+        //         return $available || $_SERVER['REMOTE_ADDR'] === '127.0.0.1';
+        //     });
+        // }
 
         /**
          * 将book转换为输出格式（我也不确定应该写在哪）

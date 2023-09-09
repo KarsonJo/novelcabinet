@@ -40,6 +40,7 @@ namespace KarsonJo\BookPost\Route {
 
             //     return $response;
             // });
+            static::allowLocalHttpAuth();
         }
 
         protected function getIdentifier()
@@ -66,6 +67,19 @@ namespace KarsonJo\BookPost\Route {
         protected function representationBrowser($_)
         {
             return new WP_REST_Response($this->getRoutes($this->namespace));
+        }
+
+        /**
+         * 允许本地环回地址通过http验证身份
+         * @return void 
+         */
+        static function allowLocalHttpAuth()
+        {
+            // print_r(1);
+            add_filter('wp_is_application_passwords_available', function (bool $available) {
+                // print_r($_SERVER['REMOTE_ADDR']);
+                return $available || $_SERVER['REMOTE_ADDR'] === '127.0.0.1';
+            });
         }
     }
 }
