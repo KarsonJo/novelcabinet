@@ -61,7 +61,7 @@ namespace KarsonJo\BookPost {
                 'capability_type'       => 'post',
                 'show_in_menu'          => true,
                 'show_ui'               => true,
-                'show_in_nav_menus'     => true,
+                'show_in_nav_menus'     => false,
                 'can_export'            => true,
             );
 

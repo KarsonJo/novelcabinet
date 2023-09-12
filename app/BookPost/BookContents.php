@@ -213,14 +213,14 @@ namespace KarsonJo\BookPost {
 
             if ($vkey < 0 || $ckey < 0)
                 return null;
-            print_r(1);
+            // print_r(1);
             if ($ckey == count($this->getVolumeChapters($vkey)) - 1) {
                 if ($vkey == count($this->getVolumes()) - 1)
                     return null; //没有了
                 $next_volume = $this->getVolumeChapters($vkey + 1);
                 return $next_volume[0]; //下一卷第一章
             }
-            print_r(2);
+            // print_r(2);
 
             return $this->getVolumeChapters($vkey)[$ckey + 1]; //这一卷下一章
         }
